@@ -124,7 +124,36 @@ def resutant_field(x_g, y_g, x_e, y_e, goal_radius, control_radius, ballistic_st
 	dy = dy_attb + dy_attc + dy_tan
 	return dx,dy
 
-def plot_fields(NX, NY, xmax, ymax, x_goal, y_goal, ballistic_strength, tangential_strength, control_radius, pose_rad, select_rad):
+def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):
+	dx,dy, dx_tan, dy_tan, dx_attc, dy_attc, dx_attb, dy_attb  = 0,0,0,0,0,0,0,0
+	dx_attb,dy_attb  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[1],float("inf"), Parameters[3],'constant')	#attractive field in ballistic region
+	
+	c1 = y_g - tan(pose_rad)*x_g 								# intercept of pose line
+	m2 = tan(pose_rad + Parameters[2]/2)							#slope of select line 
+	c2 = y_g - m2*x_g											
+	m3 = tan(pose_rad - Parameters[2]/2)
+	c3 = y_g - m3*x_g	
+	if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 >= 0):		#region outside select region 
+		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'constant', pose_rad)
+		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
+		
+	if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 < 0):		#inside select region
+		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[4],'linear', pose_rad)
+		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
+		
+	if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 >= 0):		#inside select region
+		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[4],'linear', pose_rad)
+		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
+		
+	if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 < 0):		#outside select region
+		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'constant', pose_rad)
+		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
+	
+	dx = dx_attb + dx_attc + dx_tan								#add contribution from all the fields
+	dy = dy_attb + dy_attc + dy_tan
+	return dx,dy
+	
+def plot_fields(NX, NY, xmax, ymax, x_goal, y_goal, pose_rad, Parameters):
 	
 	xmin = -xmax								  		# range of x
 	ymin = -ymax										# range of y
@@ -138,7 +167,8 @@ def plot_fields(NX, NY, xmax, ymax, x_goal, y_goal, ballistic_strength, tangenti
 	dy = np.zeros(shape = (NX,NY))
 	for i in range(NX):
 		for j in range(NY):
-			dx[i,j], dy[i,j] = resutant_field(x_goal,y_goal,X[i,j],Y[i,j], 1,control_radius,ballistic_strength,tangential_strength, pose_rad, select_rad) 
+			#dx[i,j], dy[i,j] = resutant_field(x_goal,y_goal,X[i,j],Y[i,j], 1,control_radius,ballistic_strength,tangential_strength, pose_rad, select_rad) 
+			dx[i,j], dy[i,j] = approach_victim_behaviour(x_goal,y_goal,X[i,j],Y[i,j], pose_rad, Parameters)
 	fig, ax = plt.subplots()
 	ax.quiver(x, y, dx, dy, units = 'width')
 	ax.set(aspect=1, title='Potential Fields')
@@ -148,10 +178,10 @@ def plot_fields(NX, NY, xmax, ymax, x_goal, y_goal, ballistic_strength, tangenti
 	y_line  = tan(pose_rad)*x + c1
 	ax.plot(x,y_line)										#plot of pose line
 	# plot select lines
-	c2 = y_goal -  tan(pose_rad + select_rad/2)*x_goal 			
-	c3 = y_goal -  tan(pose_rad - select_rad/2)*x_goal 	
-	y2_line  = tan(pose_rad + select_rad/2)*x + c2
-	y3_line  = tan(pose_rad - select_rad/2)*x + c3
+	c2 = y_goal -  tan(pose_rad + Parameters[2]/2)*x_goal 			
+	c3 = y_goal -  tan(pose_rad - Parameters[2]/2)*x_goal 	
+	y2_line  = tan(pose_rad + Parameters[2]/2)*x + c2
+	y3_line  = tan(pose_rad - Parameters[2]/2)*x + c3
 	#ax.plot(x,y2_line)										#plot of select region lines
 	#ax.plot(x,y3_line)										#plot of select region lines
 	plt.show()
@@ -162,12 +192,19 @@ e_lat, e_lon = 52.21477, 052.14077			# emily position
 x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
 x_emily,y_emily = latlongtoxy(e_lat,e_lon,g_lat)
 
+goal_radius = 1
 control_region_radius = 40
-ballistic_region_strength = 4
-tangential_strength = 5
+ballistic_region_gain = 4								#attractive field gain in ballistic region
+tangential_select_gain = 2								#tangential field gain in select region
+tangential_control_gain = 5								#tangential field gain in control region
+att_select_gain = 5									#tangential field gain in control region
+att_control_gain = 0									#tangential field gain in control region
 pose_radians = pi/4
 select_radians = pi/3
-plot_fields(20,20, 50, 50, 0, 0, ballistic_region_strength, tangential_strength, control_region_radius, pose_radians, select_radians)
+
+Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
+plot_fields(20,20, 50, 50, 0, 0,pose_radians,Parameters)
+
 
 
 	
