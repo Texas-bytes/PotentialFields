@@ -33,7 +33,7 @@ def latlongtoxy(lat,lon,goal_lat):								#conversion from latitude, longitude t
 	y = r*lat
 	return [x, y]
 	
-def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):
+def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):		#generate attractive field
 	
 	dx,dy = 0,0
 
@@ -57,7 +57,7 @@ def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):
 		dy = 0
 	return dx,dy
 	
-def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_rad):
+def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_rad):	#generate tangential field
 	
 	
 	dx,dy = 0,0
@@ -124,7 +124,7 @@ def resutant_field(x_g, y_g, x_e, y_e, goal_radius, control_radius, ballistic_st
 	dy = dy_attb + dy_attc + dy_tan
 	return dx,dy
 
-def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):
+def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#approach victim behaviour
 	dx,dy, dx_tan, dy_tan, dx_attc, dy_attc, dx_attb, dy_attb  = 0,0,0,0,0,0,0,0
 	dx_attb,dy_attb  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[1],float("inf"), Parameters[3],'constant')	#attractive field in ballistic region
 	
@@ -134,7 +134,7 @@ def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):
 	m3 = tan(pose_rad - Parameters[2]/2)
 	c3 = y_g - m3*x_g	
 	if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 >= 0):		#region outside select region 
-		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'constant', pose_rad)
+		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear', pose_rad)
 		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
 		
 	if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 < 0):		#inside select region
@@ -146,7 +146,7 @@ def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):
 		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
 		
 	if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 < 0):		#outside select region
-		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'constant', pose_rad)
+		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear', pose_rad)
 		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
 	
 	dx = dx_attb + dx_attc + dx_tan								#add contribution from all the fields
@@ -185,6 +185,28 @@ def plot_fields(NX, NY, xmax, ymax, x_goal, y_goal, pose_rad, Parameters):
 	#ax.plot(x,y2_line)										#plot of select region lines
 	#ax.plot(x,y3_line)										#plot of select region lines
 	plt.show()
+
+def dxdytorc(dx,dy,e_orentation_rad):		#convert potential fields vector to throttle and rudder input
+	throttle_min = 1500
+	throttle_max = 1900
+	rudder_min = 1000
+	rudder_max = 2000
+	rudder_span_rad = pi/2								#span of angle in radians
+	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
+	
+	rc1_unit = (rudder_max - rudder_min)/rudder_span_rad
+	theta = atan2(dy/dx)
+	if(abs(theta - e_orentation_rad) <= rudder_span_rad/2):			#if emily orientation is different from vector
+		rc1 = (theta - e_orentation_rad)*rc1_unit
+		rc1 = rc1 + 1500
+	else:
+		if((theta - e_orentation_rad) > 0):
+			rc1 = rudder_max
+		else:
+			rc1 = rudder_min
+	
+	return rc1, rc3
+
 	
 g_lat, g_lon = 52.20472, 052.14056			# goal position
 e_lat, e_lon = 52.21477, 052.14077			# emily position
@@ -194,11 +216,11 @@ x_emily,y_emily = latlongtoxy(e_lat,e_lon,g_lat)
 
 goal_radius = 1
 control_region_radius = 40
-ballistic_region_gain = 4								#attractive field gain in ballistic region
-tangential_select_gain = 2								#tangential field gain in select region
-tangential_control_gain = 5								#tangential field gain in control region
-att_select_gain = 5									#tangential field gain in control region
-att_control_gain = 0									#tangential field gain in control region
+ballistic_region_gain = 1								#attractive field gain in ballistic region
+tangential_select_gain = 0.1								#tangential field gain in select region
+tangential_control_gain = 0.5								#tangential field gain in control region
+att_select_gain = 0.8								#tangential field gain in control region
+att_control_gain = 0.2									#tangential field gain in control region
 pose_radians = pi/4
 select_radians = pi/3
 
