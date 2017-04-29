@@ -2,7 +2,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import asin, sin, cos, tan, sqrt, atan2, radians, pi
 
+# Define all the parameters here
 r = 6371000 						#6378km optional			# Radius of earth in kilometers. Use 3956 for miles
+goal_radius = 1
+control_region_radius = 40
+ballistic_region_gain = 1							#attractive field gain in ballistic region
+tangential_select_gain = 0.3								#tangential field gain in select region
+tangential_control_gain = 0.8								#tangential field gain in control region
+att_select_gain = 1							#tangential field gain in control region
+att_control_gain = 0.3								#tangential field gain in control region
+pose_radians = pi/4
+select_radians = pi/3
+
+Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
 
 def haver_distance(lat1, lon1, lat2, lon2):							# haversine distance formula
 	#Calculate the great circle distance between two points 
@@ -94,35 +106,6 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 		dx = 0
 		dy = 0
 	return dx,dy
-	
-def resutant_field(x_g, y_g, x_e, y_e, goal_radius, control_radius, ballistic_strength, tangential_strength, pose_rad, select_rad):
-	dx,dy, dx_tan, dy_tan, dx_attc, dy_attc, dx_attb, dy_attb  = 0,0,0,0,0,0,0,0
-	
-	dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,goal_radius,control_radius, tangential_strength,'constant', pose_rad)
-	dx_attb,dy_attb  = att_potential_field(x_g,y_g,x_e,y_e,control_radius,float("inf"), ballistic_strength,'constant')
-	#dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,goal_radius,control_radius, ballistic_strength,'linear')
-	
-	c1 = y_g - tan(pose_rad)*x_g 								# intercept of pose line
-	m2 = tan(pose_rad + select_rad/2)							#slope of select line 
-	c2 = y_g - m2*x_g											
-	m3 = tan(pose_rad - select_rad/2)
-	c3 = y_g - m3*x_g											#intercepts of select region lines
-	
-	if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 >= 0):		#region outside select region 
-		dx_attc,dy_attc = 0,0
-		
-	if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 < 0):		#inside select region
-		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,goal_radius,control_radius, ballistic_strength,'linear')
-		
-	if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 >= 0):		#inside select region
-		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,goal_radius,control_radius, ballistic_strength,'linear')
-		
-	if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 < 0):		#outside select region
-		dx_attc,dy_attc = 0,0
-		
-	dx = dx_attb + dx_attc + dx_tan								#add contribution from all the fields
-	dy = dy_attb + dy_attc + dy_tan
-	return dx,dy
 
 def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#approach victim behaviour
 	dx,dy, dx_tan, dy_tan, dx_attc, dy_attc, dx_attb, dy_attb  = 0,0,0,0,0,0,0,0
@@ -153,7 +136,7 @@ def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#appr
 	dy = dy_attb + dy_attc + dy_tan
 	return dx,dy
 	
-def plot_fields(NX, NY, xmax, ymax, x_goal, y_goal, pose_rad, Parameters):
+def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_rad, Parameters):
 	
 	xmin = -xmax								  		# range of x
 	ymin = -ymax										# range of y
@@ -177,14 +160,47 @@ def plot_fields(NX, NY, xmax, ymax, x_goal, y_goal, pose_rad, Parameters):
 							
 	y_line  = tan(pose_rad)*x + c1
 	ax.plot(x,y_line)										#plot of pose line
+	
 	# plot select lines
 	c2 = y_goal -  tan(pose_rad + Parameters[2]/2)*x_goal 			
 	c3 = y_goal -  tan(pose_rad - Parameters[2]/2)*x_goal 	
-	y2_line  = tan(pose_rad + Parameters[2]/2)*x + c2
-	y3_line  = tan(pose_rad - Parameters[2]/2)*x + c3
-	#ax.plot(x,y2_line)										#plot of select region lines
-	#ax.plot(x,y3_line)										#plot of select region lines
+	
+	y2_line  = tan(pose_rad + Parameters[2]/2)*x + c2					#equation of line
+	
+	y2_line = (y2_line > ymax)*ymax + (y2_line <= ymax)*y2_line					#make zero if out of range
+	y2_line = (y2_line < -ymax)*(-ymax) + (y2_line > -ymax)*y2_line				#make zero if out of range
+	
+	y3_line  = tan(pose_rad - Parameters[2]/2)*x + c3					#equation of line
+	
+	y3_line = (y3_line > ymax)*ymax + (y3_line <= ymax)*y3_line			#make zero if out of range
+	y3_line = (y3_line < -ymax)*(-ymax) + (y3_line > -ymax)*y3_line		#make zero if out of range
+	
+	ax.plot(x,y2_line)										#plot of select region lines
+	ax.plot(x,y3_line)										#plot of select region lines
+	
+	#----------------robot simulation -----------------
+	x_e = x_e_start
+	y_e = y_e_start
+	point_x = np.array(x_e)
+	point_y = np.array(y_e)
+	dt = 2
+	dist = sqrt((x_goal - x_e)*(x_goal - x_e) + (y_goal - y_e)*(y_goal - y_e)) 
+	
+	while(dist > 4):
+		dx,dy = approach_victim_behaviour(x_goal,y_goal,x_e,y_e, pose_rad, Parameters)
+		V = sqrt(dx**2 + dy**2)
+		TH = atan2(dy,dx)
+		x_e = x_e + V*cos(TH)*dt
+		y_e = y_e + V*sin(TH)*dt
+		dist = sqrt((x_goal - x_e)*(x_goal - x_e) + (y_goal - y_e)*(y_goal - y_e)) 
+		
+		point_x = np.append(point_x,x_e)
+		point_y = np.append(point_y,y_e)
+		print x_e, y_e, dist
+	print point_x
+	ax.scatter(point_x,point_y)
 	plt.show()
+
 
 def dxdytorc(dx,dy,e_orentation_rad):		#convert potential fields vector to throttle and rudder input
 	throttle_min = 1500
@@ -207,26 +223,83 @@ def dxdytorc(dx,dy,e_orentation_rad):		#convert potential fields vector to throt
 	
 	return rc1, rc3
 
-	
+
 g_lat, g_lon = 52.20472, 052.14056			# goal position
 e_lat, e_lon = 52.21477, 052.14077			# emily position
 
 x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
 x_emily,y_emily = latlongtoxy(e_lat,e_lon,g_lat)
 
-goal_radius = 1
-control_region_radius = 40
-ballistic_region_gain = 1								#attractive field gain in ballistic region
-tangential_select_gain = 0.1								#tangential field gain in select region
-tangential_control_gain = 0.5								#tangential field gain in control region
-att_select_gain = 0.8								#tangential field gain in control region
-att_control_gain = 0.2									#tangential field gain in control region
-pose_radians = pi/4
-select_radians = pi/3
 
-Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
-plot_fields(20,20, 50, 50, 0, 0,pose_radians,Parameters)
+#plot_fields(20,20, 50, 50, 0, 0,pose_radians,Parameters)
 
-
-
+def test_case(T,NX,NY,xmax,ymax):					#function to run testcases,NX = number of test points on X-axis, xmax = max value of x in plot
+	if(T==1):
+		x_emily, y_emily = 0,0              #emily position
+		x_goal, y_goal = 50,50				#goal position 
+		pose = 25*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+		
+	if(T==2):
+		x_emily, y_emily = 0,0              #emily position
+		x_goal, y_goal = -50,50				#goal position 
+		pose = 25*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+		
+	if(T==3):
+		x_emily, y_emily = 0,0              #emily position
+		x_goal, y_goal = -50,-50				#goal position 
+		pose = 25*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+		
+	if(T==4):
+		x_emily, y_emily = 0,0              #emily position
+		x_goal, y_goal = 50,-50				#goal position 
+		pose = 25*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+		
+	if(T==5):
+		x_emily, y_emily = 0,0              #emily position
+		x_goal, y_goal = 25,25				#goal position 
+		pose = 50*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+		
+	if(T==6):
+		x_emily, y_emily = 0,0              #emily position
+		x_goal, y_goal = -25,-25			#goal position 
+		pose = 50*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)	
 	
+	if(T==7):
+		x_emily, y_emily = 0,0              #emily position
+		x_goal, y_goal = 15,15				#goal position 
+		pose = 75*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+		
+	if(T==8):
+		x_emily, y_emily = 0,0              #emily position
+		x_goal, y_goal = 10,10				#goal position 
+		pose = 75*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+	
+	if(T==9):
+		x_emily, y_emily = -25,-25              #emily position
+		x_goal, y_goal = -50,50				#goal position 
+		pose = 100*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+	
+	if(T==10):
+		x_emily, y_emily = -25,-25              #emily position
+		x_goal, y_goal = -50,-50				#goal position 
+		pose = 100*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+	
+	if(T==11):
+		x_emily, y_emily = 80,80              #emily position
+		x_goal, y_goal = 0,0				#goal position 
+		pose = 45*pi/180
+		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
+		
+		
+test_case(2,40,40, 80, 80)
+
