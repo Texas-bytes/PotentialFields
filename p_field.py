@@ -197,7 +197,7 @@ def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_r
 		point_x = np.append(point_x,x_e)
 		point_y = np.append(point_y,y_e)
 		print x_e, y_e, dist
-	print point_x
+	#print point_x
 	ax.scatter(point_x,point_y)
 	plt.show()
 
@@ -223,12 +223,27 @@ def dxdytorc(dx,dy,e_orentation_rad):		#convert potential fields vector to throt
 	
 	return rc1, rc3
 
-
+	
 g_lat, g_lon = 52.20472, 052.14056			# goal position
 e_lat, e_lon = 52.21477, 052.14077			# emily position
 
-x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
-x_emily,y_emily = latlongtoxy(e_lat,e_lon,g_lat)
+def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):		 #approach a gps position using potential fields
+	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
+	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
+	
+	pose_rad = pi/2 + atan2((y_g - y_e_start),(x_g - x_e_start))		#perpendicular to initial approach change it input if needed
+	
+	while(dist >= goal_radius):
+		#------------ code for reading gps location of emily and its orientation ------ 
+		#------------------ get e_lat,e_lon, e_orient ---------------------
+		
+		
+		x_e,y_e = latlongtoxy(e_lat,e_lon,g_lat)										#change latitude and longitude to xy
+		dx,dy = approach_victim_behaviour(x_goal,y_goal,x_e,y_e, pose_rad, Parameters)	#get potential field vector
+		rc1, rc3 = dxdytorc(dx,dy,e_orient)												#get rc parameters
+		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)
+		
+		#code for sending the writing the rc commands
 
 
 #plot_fields(20,20, 50, 50, 0, 0,pose_radians,Parameters)
@@ -301,5 +316,5 @@ def test_case(T,NX,NY,xmax,ymax):					#function to run testcases,NX = number of 
 		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
 		
 		
-test_case(2,40,40, 80, 80)
+test_case(3,40,40, 80, 80)
 
