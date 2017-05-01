@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from math import asin, sin, cos, tan, sqrt, atan2, radians, pi
 
+r=1
 def haver_distance(lat1, lon1, lat2, lon2):							# haversine distance formula
 	#Calculate the great circle distance between two points 
     #on the earth (specified in decimal degrees)
@@ -25,7 +26,7 @@ def equirect_distance(lat1, lon1, lat2, lon2):					   #approximate equirectangle
 	dy = lat2 - lat1
 	return r * sqrt( dx*dx + dy*dy )
 
-def latlongtoxy(lat,lon,goal_lat):								#conversion from latitude, longitude to x,y coordinates
+def latlongtoxy(lat,lon,goal_lat):					#conversion from latitude, longitude to x,y coordinates
 	lat, lon,goal_lat = map(radians, [lat, lon, goal_lat])
 	x = r*lon*cos(goal_lat)										#x, y based on goal latitude
 	y = r*lat
@@ -50,7 +51,7 @@ def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):		#gen
 	if((distance >= min_r) and (distance <= max_r)):						# attractive field
 		dx = Vmag*cos(theta)
 		dy = Vmag*sin(theta)
-	if(distance > max_r):													#zero field outside max radius
+	if(distance > max_r):									#zero field outside max radius
 		dx = 0
 		dy = 0
 	return dx,dy
@@ -64,8 +65,8 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 	c2 = y_g + (1/m)*x_g						# slope of line perpendicular to pose line
 	
 	distance = sqrt((x_g - x_e)*(x_g - x_e) + (y_g - y_e)*(y_g - y_e))		#distance of emily from goal
-	theta = atan2((y_g - y_e),(x_g - x_e))									#angle
-	if(type == 'linear'):													#magnitude profile
+	theta = atan2((y_g - y_e),(x_g - x_e))								#angle
+	if(type == 'linear'):										#magnitude profile
 		Vmag = strength*((distance - min_r)/(max_r - min_r))
 	if(type == 'constant'):
 		Vmag = strength
@@ -75,7 +76,7 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 	if(distance < min_r):	
 		dx = 0
 		dy = 0
-	if((distance >= min_r) and (distance <= max_r)):						#tangential field nonzero only in radius range (min_r,max_r)
+	if((distance >= min_r) and (distance <= max_r)):		#tangential field nonzero only in radius range (min_r,max_r)
 		if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 >= 0)):
 			dx = Vmag*cos(theta + pi/2)
 			dy = Vmag*sin(theta + pi/2)

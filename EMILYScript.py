@@ -116,7 +116,7 @@ def arm_and_takeoff(aTargetAltitude):
         print(" Waiting for vehicle to initialise...")
         time.sleep(1)
 
-    print("Arming motors")
+    print("Arming Throttle")
     # Copter should arm in GUIDED mode
     vehicle.mode = VehicleMode("GUIDED")
     vehicle.armed = True
@@ -125,27 +125,13 @@ def arm_and_takeoff(aTargetAltitude):
     while not vehicle.armed:
         print(" Waiting for arming...")
         time.sleep(1)
-
-    #print("Taking off!")
-    vehicle.simple_takeoff(aTargetAltitude)  # Take off to target altitude
-
-    # Wait until the vehicle reaches a safe height before processing the goto
-    #  (otherwise the command after Vehicle.simple_takeoff will execute
-    #   immediately).
-    while True:
-        #print(" Altitude: ", vehicle.location.global_relative_frame.alt)
-        # Break and return from function just below target altitude.
-        #if vehicle.location.global_relative_frame.alt >= aTargetAltitude * 0.95:
-        #    #print("Reached target altitude")
-        break
-        time.sleep(1)		
-
-#test_case(3,40,40, 80, 80)
+	
 
 
 print (vehicle.location.global_frame.lat)
 print (vehicle.location.global_frame.lon)
 print (vehicle.heading)
+head = vehicle.heading
 arm_and_takeoff(100)
 
 time.sleep(1)
@@ -154,13 +140,26 @@ time.sleep(1)
 vehicle.armed = True
 time.sleep(1)
 
-approach_gps(30.619651,-96.338512, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, Parameters)
+#approach_gps(30.619651,-96.338512, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, Parameters)
+
+#vehicle.channels.overrides = {'3':1600}
+#time.sleep(1)
+#vehicle.channels.overrides = {'1':1900}
+#time.sleep(3)
+print ("\nI am here!")
+while (head < 350 and head > 10):
+	vehicle.channels.overrides = {'3':1510}
+	vehicle.channels.overrides = {'1':1900}
+	head = vehicle.heading
+	print (head)
 
 vehicle.channels.overrides = {'3':1500}
 time.sleep(1)
 vehicle.channels.overrides = {'1':1500}
 time.sleep(1)
-#Close vehicle object before exiting script
+print ("\nI am here!")
+#Close vehicle object before exiting script 
+print (vehicle.heading)
 print ("\nClose vehicle object")
 vehicle.close()
 
