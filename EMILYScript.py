@@ -27,14 +27,13 @@ if not connection_string:
 
 # Connect to the Vehicle
 #print ('Connecting to vehicle on: %s') % connection_string
-vehicle = connect(connection_string, wait_ready=True)
-
+vehicle = connect(connection_string, wait_ready=False)
 
 # Define all the parameters here
-r = 6371000 						#6378km optional			# Radius of earth in kilometers. Use 3956 for miles
+r = 6371000 	#6378km optional # Radius of earth in kilometers. Use 3956 for miles
 goal_radius = 1
 control_region_radius = 20
-ballistic_region_gain = 1							#attractive field gain in ballistic region
+ballistic_region_gain = 1		#attractive field gain in ballistic region
 tangential_select_gain = 1								#tangential field gain in select region
 tangential_control_gain = 1								#tangential field gain in control region
 att_select_gain = 1							#tangential field gain in control region
@@ -118,7 +117,7 @@ def arm_and_takeoff(aTargetAltitude):
 
     print("Arming Throttle")
     # Copter should arm in GUIDED mode
-    vehicle.mode = VehicleMode("GUIDED")
+    #vehicle.mode = VehicleMode("GUIDED")
     vehicle.armed = True
 
     # Confirm vehicle armed before attempting to take off
@@ -146,29 +145,38 @@ time.sleep(1)
 #time.sleep(1)
 #vehicle.channels.overrides = {'1':1900}
 #time.sleep(3)
-print ("\nI am here!")
-while (head < 350 and head > 10):
+
+#print ("\nI am here!")
+while True:
+	if(head < 190 and head > 170):
+		break
 	vehicle.channels.overrides = {'3':1510}
 	vehicle.channels.overrides = {'1':1900}
 	head = vehicle.heading
-	print (head)
+	#print (head)
 
-vehicle.channels.overrides = {'3':1500}
+
 time.sleep(1)
-vehicle.channels.overrides = {'1':1500}
-time.sleep(1)
-print ("\nI am here!")
+#print ("\nI am here!")
 #Close vehicle object before exiting script 
-print (vehicle.heading)
-print ("\nClose vehicle object")
-vehicle.close()
+def savecounter():
+	print (vehicle.heading)
+	print ("\nClose vehicle object")
+	vehicle.mode = VehicleMode("RTL")
+	#vehicle.channels.overrides = {'3':1510}
+	#vehicle.channels.overrides = {'1':1500}
+	#vehicle.channels.overrides = {}
+	vehicle.close()
+
+
 
 # Shut down simulator if it was started.
 if sitl is not None:
     sitl.stop()
 
 print("Completed")
-
+import atexit
+atexit.register(savecounter)
 
 
 
