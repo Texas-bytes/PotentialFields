@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from math import asin, sin, cos, tan, sqrt, atan2, radians, pi
+from math import asin, sin, cos, tan, sqrt, atan, atan2, radians, pi
 
-r=1
 def haver_distance(lat1, lon1, lat2, lon2):							# haversine distance formula
 	#Calculate the great circle distance between two points 
     #on the earth (specified in decimal degrees)
@@ -26,7 +25,7 @@ def equirect_distance(lat1, lon1, lat2, lon2):					   #approximate equirectangle
 	dy = lat2 - lat1
 	return r * sqrt( dx*dx + dy*dy )
 
-def latlongtoxy(lat,lon,goal_lat):					#conversion from latitude, longitude to x,y coordinates
+def latlongtoxy(lat,lon,goal_lat):								#conversion from latitude, longitude to x,y coordinates
 	lat, lon,goal_lat = map(radians, [lat, lon, goal_lat])
 	x = r*lon*cos(goal_lat)										#x, y based on goal latitude
 	y = r*lat
@@ -51,7 +50,7 @@ def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):		#gen
 	if((distance >= min_r) and (distance <= max_r)):						# attractive field
 		dx = Vmag*cos(theta)
 		dy = Vmag*sin(theta)
-	if(distance > max_r):									#zero field outside max radius
+	if(distance > max_r):													#zero field outside max radius
 		dx = 0
 		dy = 0
 	return dx,dy
@@ -60,13 +59,17 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 	
 	
 	dx,dy = 0,0
+	
 	m = tan(pose_rad)							# slope of pose line
+	
 	c1 = y_g -  m*x_g 							# intercept of pose line
 	c2 = y_g + (1/m)*x_g						# slope of line perpendicular to pose line
 	
 	distance = sqrt((x_g - x_e)*(x_g - x_e) + (y_g - y_e)*(y_g - y_e))		#distance of emily from goal
-	theta = atan2((y_g - y_e),(x_g - x_e))								#angle
-	if(type == 'linear'):										#magnitude profile
+	theta = atan2((y_g - y_e),(x_g - x_e))									#angle
+	
+	
+	if(type == 'linear'):													#magnitude profile
 		Vmag = strength*((distance - min_r)/(max_r - min_r))
 	if(type == 'constant'):
 		Vmag = strength
@@ -77,18 +80,32 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 		dx = 0
 		dy = 0
 	if((distance >= min_r) and (distance <= max_r)):		#tangential field nonzero only in radius range (min_r,max_r)
-		if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 >= 0)):
-			dx = Vmag*cos(theta + pi/2)
-			dy = Vmag*sin(theta + pi/2)
-		if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 < 0)):
-			dx = Vmag*cos(theta - pi/2)
-			dy = Vmag*sin(theta - pi/2)
-		if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 < 0)):
-			dx = Vmag*cos(theta + pi/2)
-			dy = Vmag*sin(theta + pi/2)
-		if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 >= 0)):
-			dx = Vmag*cos(theta - pi/2)
-			dy = Vmag*sin(theta - pi/2)
+		if(m>=0):
+			if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 >= 0)):
+				dx = Vmag*cos(theta + pi/2)
+				dy = Vmag*sin(theta + pi/2)
+			if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 < 0)):
+				dx = Vmag*cos(theta - pi/2)
+				dy = Vmag*sin(theta - pi/2)
+			if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 < 0)):
+				dx = Vmag*cos(theta + pi/2)
+				dy = Vmag*sin(theta + pi/2)
+			if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 >= 0)):
+				dx = Vmag*cos(theta - pi/2)
+				dy = Vmag*sin(theta - pi/2)
+		else:
+			if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 >= 0)):
+				dx = Vmag*cos(theta - pi/2)
+				dy = Vmag*sin(theta - pi/2)
+			if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 < 0)):
+				dx = Vmag*cos(theta + pi/2)
+				dy = Vmag*sin(theta + pi/2)
+			if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 < 0)):
+				dx = Vmag*cos(theta - pi/2)
+				dy = Vmag*sin(theta - pi/2)
+			if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 >= 0)):
+				dx = Vmag*cos(theta + pi/2)
+				dy = Vmag*sin(theta + pi/2)
 	if(distance > max_r):
 		dx = 0
 		dy = 0
@@ -98,27 +115,44 @@ def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#appr
 
 	dx,dy, dx_tan, dy_tan, dx_attc, dy_attc, dx_attb, dy_attb  = 0,0,0,0,0,0,0,0
 	dx_attb,dy_attb  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[1],float("inf"), Parameters[3],'constant')	#attractive field in ballistic region
-	
+	m = tan(pose_rad)
 	c1 = y_g - tan(pose_rad)*x_g 								# intercept of pose line
 	m2 = tan(pose_rad + Parameters[2]/2)							#slope of select line 
 	c2 = y_g - m2*x_g											
 	m3 = tan(pose_rad - Parameters[2]/2)
 	c3 = y_g - m3*x_g	
-	if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 >= 0):		#region outside select region 
-		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear', pose_rad)
-		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
+	if(m>=0):
+		if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 >= 0):		#region outside select region 
+			dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear', pose_rad)
+			dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
 		
-	if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 < 0):		#inside select region
-		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[4],'linear', pose_rad)
-		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
+		if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 < 0):		#inside select region
+			dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[4],'linear', pose_rad)
+			dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
 		
-	if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 >= 0):		#inside select region
-		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[4],'linear', pose_rad)
-		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
+		if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 >= 0):		#inside select region
+			dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[4],'linear', pose_rad)
+			dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
 		
-	if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 < 0):		#outside select region
-		dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear', pose_rad)
-		dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
+		if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 < 0):		#outside select region
+			dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear', pose_rad)
+			dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
+	else:
+		if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 >= 0):		#region outside select region 
+			dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[4],'linear', pose_rad)
+			dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
+		
+		if(y_e - m2*x_e - c2 >= 0 and y_e - m3*x_e - c3 < 0):		#inside select region
+			dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear', pose_rad)
+			dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[7],'linear')
+		
+		if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 >= 0):		#inside select region
+			dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear', pose_rad)
+			dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[5],'linear')
+		
+		if(y_e - m2*x_e - c2 < 0 and y_e - m3*x_e - c3 < 0):		#outside select region
+			dx_tan,dy_tan  = tan_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[4],'linear', pose_rad)
+			dx_attc,dy_attc  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[0], Parameters[1], Parameters[6],'linear')
 	
 	dx = dx_attb + dx_attc + dx_tan								#add contribution from all the fields
 	dy = dy_attb + dy_attc + dy_tan
@@ -147,6 +181,9 @@ def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_r
 	c1 = y_goal -  tan(pose_rad)*x_goal 							#intercept of pose line
 							
 	y_line  = tan(pose_rad)*x + c1
+	
+	y_line = (y_line > ymax)*ymax + (y_line <= ymax)*y_line					#make zero if out of range
+	y_line = (y_line < -ymax)*(-ymax) + (y_line > -ymax)*y_line				#make zero if out of range
 	ax.plot(x,y_line)										#plot of pose line
 	
 	# plot select lines
@@ -174,9 +211,9 @@ def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_r
 	dt = 2
 	dist = sqrt((x_goal - x_e)*(x_goal - x_e) + (y_goal - y_e)*(y_goal - y_e)) 
 	
-	while(dist > 4):
+	while(dist >= Parameters[0] + 0.4):
 		dx,dy = approach_victim_behaviour(x_goal,y_goal,x_e,y_e, pose_rad, Parameters)
-		V = sqrt(dx**2 + dy**2)
+		V = 4*sqrt(dx**2 + dy**2)
 		TH = atan2(dy,dx)
 		x_e = x_e + V*cos(TH)*dt
 		y_e = y_e + V*sin(TH)*dt
@@ -184,7 +221,7 @@ def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_r
 		
 		point_x = np.append(point_x,x_e)
 		point_y = np.append(point_y,y_e)
-		print x_e, y_e, dist
-	#print point_x
+		#print x_e, y_e, dist
+	print Parameters[0]
 	ax.scatter(point_x,point_y)
 	plt.show()
