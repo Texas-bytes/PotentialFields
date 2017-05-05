@@ -12,7 +12,7 @@ tangential_select_gain = 0.3								#tangential field gain in select region
 tangential_control_gain = 0.8								#tangential field gain in control region
 att_select_gain = 1						#tangential field gain in control region
 att_control_gain = 0.8								#tangential field gain in control region
-pose_radians = pi/4
+pose_radians = pi/2
 select_radians = pi/3
 
 Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from math import asin, sin, cos, tan, sqrt, atan, atan2, radians, pi
-
+from math import asin, sin, cos, tan, sqrt, atan, atan2, radians, pi, degrees
+r = 6371000
 def haver_distance(lat1, lon1, lat2, lon2):							# haversine distance formula
 	#Calculate the great circle distance between two points 
     #on the earth (specified in decimal degrees)
@@ -32,7 +32,7 @@ def equirect_distance(lat1, lon1, lat2, lon2):					   #approximate equirectangle
 	dy = lat2 - lat1
 	return r * sqrt( dx*dx + dy*dy )
 
-def latlongtoxy(lat,lon,goal_lat):								#conversion from latitude, longitude to x,y coordinates
+def latlongtoxy(lat,lon,goal_lat):					#conversion from latitude, longitude to x,y coordinates
 	lat, lon,goal_lat = map(radians, [lat, lon, goal_lat])
 	x = r*lon*cos(goal_lat)										#x, y based on goal latitude
 	y = r*lat
@@ -45,19 +45,19 @@ def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):		#gen
 	distance = sqrt((x_g - x_e)*(x_g - x_e) + (y_g - y_e)*(y_g - y_e)) 		# distance b/w emily and goal
 	theta = atan2((y_g - y_e),(x_g - x_e))									# angle
 	if(type == 'linear'):			
-		Vmag = strength*((distance - min_r)/(max_r - min_r))				#linear magnitude profile
+		Vmag = strength*((distance - min_r)/(max_r - min_r))	#linear magnitude profile
 	if(type == 'constant'):
-		Vmag = strength														#constant magnitude profile
+		Vmag = strength							#constant magnitude profile
 	if(type == 'exponential'):
 		Vmag = strength*((distance - min_r)/(max_r - min_r))**2				#exponential magnitude profile
 	
-	if(distance < min_r):													#zero field inside min radius
+	if(distance < min_r):									#zero field inside min radius
 		dx = 0
 		dy = 0
-	if((distance >= min_r) and (distance <= max_r)):						# attractive field
+	if((distance >= min_r) and (distance <= max_r)):				# attractive field
 		dx = Vmag*cos(theta)
 		dy = Vmag*sin(theta)
-	if(distance > max_r):													#zero field outside max radius
+	if(distance > max_r):								#zero field outside max radius
 		dx = 0
 		dy = 0
 	return dx,dy
