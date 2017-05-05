@@ -46,10 +46,10 @@ Parameters = [goal_radius, control_region_radius, select_radians, ballistic_regi
 
 def dxdytorc(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
 	throttle_min = 1500
-	throttle_max = 1900
+	throttle_max = 1600
 	rudder_min = 1100
 	rudder_max = 1900
-	rudder_span_rad = 2*pi								#span of angle in radians
+	rudder_span_rad = 2*pi				#span of angle in radians
 	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
 	
 	rc1_unit = (rudder_max - rudder_min)/rudder_span_rad
@@ -62,7 +62,7 @@ def dxdytorc(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vector
 
 	if(abs(a) <= rudder_span_rad/2):			#if emily orientation is different from vector
 		rc1 = a*rc1_unit
-		rc1 = rc1 + 1500
+		rc1 = 1500 - rc1
 	else:
 		if(a > 0):
 			rc1 = rudder_max
@@ -74,35 +74,70 @@ def dxdytorc(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vector
 	
 #g_lat, g_lon = 52.20472, 052.14056			# goal position
 #e_lat, e_lon = 52.21477, 052.14077			# emily position
+#approach a gps position using potential fields
 
-def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):		 #approach a gps position using potential fields
+def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
 	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
 	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
 	
 	print ("\n HERE I AM\n\n")
 	#This is the goal pose of EMILY. THis is done by adding 90 to current pose of EMILY
-	pose_rad = pi/2 # + atan2((y_goal - y_e_start),(x_goal - x_e_start))		#perpendicular to initial approach change it input if needed
+	pose_rad = (vehicle.heading + 90) * (pi/180)
 	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
 	print (dist)
+	while(dist >= control_region_radius):
+		rc1 = 0				
+		head = get_heading(vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, g_lat, g_lon)
+		diff = head - vehicle.heading 
+		diff = 2 * diff
+		rc1 = diff + 1500
+		#code for sending the writing the rc commands
+		vehicle.channels.overrides = {'3':1900}
+		time.sleep(1)
+		vehicle.channels.overrides = {'1':rc1}
+		time.sleep(1)
+
+		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
+		print (rc1, 1600, dist)
+
 	while(dist >= goal_radius):
-		#------------ code for reading gps location of emily and its orientation ------
-		e_lat = vehicle.location.global_frame.lat 
-		e_lon = vehicle.location.global_frame.lon
-		e_heading = vehicle.heading * pi/180
-		#------------------ get e_lat,e_lon, e_orient ---------------------
-		
-		
-		x_e,y_e = latlongtoxy(e_lat,e_lon,g_lat)			#change latitude and longitude to xy
-		dx,dy = approach_victim_behaviour(x_goal,y_goal,x_e,y_e, pose_rad, Parameters)	#get potential field vector
-		rc1, rc3 = dxdytorc(dx,dy, e_heading,g_lon)						#get rc parameters
-		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)
-		print (rc1, rc3,dist)
-		
+		rc1 = 0	
+		rc3 = 200
+		rc1 = 10*(400/(control_region_radius))
+		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
+		rc3 = (dist/control_region_radius) * rc3
+		rc3 = rc3 +1500			
+		#head = get_heading(vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, g_lat, g_lon)
+		#diff = head - vehicle.heading 
+		#diff = 2 * diff
+		rc1 = rc1 + 1500
 		#code for sending the writing the rc commands
 		vehicle.channels.overrides = {'3':rc3}
 		time.sleep(1)
 		vehicle.channels.overrides = {'1':rc1}
 		time.sleep(1)
+
+		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
+		print (rc1, rc3, dist)
+	
+	print ("\n REACHED THE ADMINISTRATION BUILDING!\n\n")
+	vehicle.channels.overrides = {'3': 1500}
+	time.sleep(1)
+	vehicle.channels.overrides = {'1':1500}
+	time.sleep(1)
+
+def turn_towards(heading):
+	head = vehicle.heading
+	rc1 = 1900
+	while True:
+		if(head > heading - 10 and head < heading + 10):
+			break
+		vehicle.channels.overrides = {'3':1525}
+		time.sleep(1)
+		vehicle.channels.overrides = {'1':rc1}
+		time.sleep(1)
+		head = vehicle.heading
+
 		
 def arm_and_takeoff(aTargetAltitude):
     """
@@ -139,33 +174,53 @@ time.sleep(1)
 vehicle.armed = True
 time.sleep(1)
 
-#approach_gps(30.619651,-96.338512, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, Parameters)
-
 #vehicle.channels.overrides = {'3':1600}
 #time.sleep(1)
 #vehicle.channels.overrides = {'1':1900}
 #time.sleep(3)
 
 #print ("\nI am here!")
+dist = haver_distance(vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, 30.618851, -96.336629)
+head = get_heading(vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, 30.618851, -96.336629)
+print ("Distance")
+print(dist)
+print("Heading")
+print(head)
+
+
+
+turn_towards(head)
+x_e,y_e = latlongtoxy(vehicle.location.global_frame.lat,vehicle.location.global_frame.lon,30.619651)
+print("x:")
+print(x_e)
+print("y:")
+print(y_e)
+
+approach_gps(30.618851,-96.336629, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, Parameters)
+
+'''
 while True:
-	if(head < 190 and head > 170):
+	if(head > 280 and head < 290):
 		break
 	vehicle.channels.overrides = {'3':1510}
 	vehicle.channels.overrides = {'1':1900}
 	head = vehicle.heading
 	#print (head)
 
-
+'''
 time.sleep(1)
 #print ("\nI am here!")
 #Close vehicle object before exiting script 
 def savecounter():
 	print (vehicle.heading)
 	print ("\nClose vehicle object")
+	vehicle.channels.overrides = {'3':1500}
+	time.sleep(1)
+	vehicle.channels.overrides = {'1':1500}
+	time.sleep(1)	
+	vehicle.channels.overrides = {}
+	time.sleep(1)
 	vehicle.mode = VehicleMode("RTL")
-	#vehicle.channels.overrides = {'3':1510}
-	#vehicle.channels.overrides = {'1':1500}
-	#vehicle.channels.overrides = {}
 	vehicle.close()
 
 
