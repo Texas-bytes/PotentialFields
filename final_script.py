@@ -2,8 +2,8 @@ from __future__ import print_function
 import time
 from dronekit import connect, VehicleMode, LocationGlobalRelative
 
-import numpy as np
-import matplotlib.pyplot as plt
+import numpy as np						# needed mostly for plots
+import matplotlib.pyplot as plt					# needed mostly fot plots
 from math import asin, sin, cos, tan, sqrt, atan2, radians, pi
 from defined import *
 
@@ -30,91 +30,91 @@ if not connection_string:
 vehicle = connect(connection_string, wait_ready=False)
 
 # Define all the parameters here
-r = 6371000 	#6378km optional # Radius of earth in kilometers. Use 3956 for miles
-goal_radius = 3
-control_region_radius = 250
-ballistic_region_gain = 1		#attractive field gain in ballistic region
-tangential_select_gain = 0.1								#tangential field gain in select region
-tangential_control_gain = 0.8								#tangential field gain in control region
-att_select_gain = 1							#tangential field gain in control region
-att_control_gain = 0.8								#tangential field gain in control region
-pose_radians = pi/2
-select_radians = pi/4
+r = 6371000 				# 6378km optional # Radius of earth in kilometers. Use 3956 for miles
+goal_radius = 2				# the radius at which robot will stop
+control_region_radius = 200		# the radius at which try robot starts to worry about pose
+ballistic_region_gain = 1		# attractive field gain in ballistic region
+tangential_select_gain = 0.1		# tangential field gain in select region
+tangential_control_gain = 0.8		# tangential field gain in control region
+att_select_gain = 1			# tangential field gain in control region
+att_control_gain = 0.8			# tangential field gain in control region
+pose_radians = pi/4			# the pose robot should achieve at the goal
+select_radians = pi/4			# select region angle
 
-Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
+Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, 		tangential_control_gain, att_select_gain, att_control_gain]
 
 
-def dxdytorc(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
-	throttle_min = 1520
-	throttle_max = 1900
-	rudder_min = 1100
-	rudder_max = 1900
-	rudder_span_rad = 2*pi				#span of angle in radians
-	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
-	
-	rc1_unit = (rudder_max - rudder_min)/rudder_span_rad
-	
-
-	theta = atan2(dy,dx)
-	if(theta < 0):
-		theta = theta + 2*pi
-	a = theta - e_orentation_rad
-	
-	if(abs(a) <= rudder_span_rad):			#if emily orientation is different from vector
-		rc1 = sin(a)*rc1_unit
-		rc1 = 1500 + rc1
-	else:
-		if(a > 0):
-			rc1 = rudder_max
-		else:
-			rc1 = rudder_min
-	
-	return round(rc1), round(rc3)
-
-def move_random():
-	vehicle.channels.overrides = {'3':1900}
-	time.sleep(1)
-	rc3 = 1700
-	vehicle.channels.overrides = {'1':rc3}
-	time.sleep(1)
-	i = 30
-	while(i>0):
-		time.sleep(1)
-		vehicle.channels.overrides = {'3':1900}
-		i = i - 1;
-
-def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):	#approach a gps position using potential fields
+def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Parameters): #approach a gps position using potential fields
+	"""
+	# This is the main function through which emily appraoches a gps location by potential fields	
+	"""
 	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
 	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
 	
 	print ("\n HERE I AM\n\n")
 	
 	
-	pose_rad = -pi/2
 	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
 	print (dist)
+	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
+	turn_towards(heading)						#turn towards the goal initially
+	
+	start_time = time.time()
+	current_time = 0
+	dstore = []
+	hstore = []
 	while(dist >= goal_radius):
+
 		#------------ code for reading gps location of emily and its orientation ------
 		e_lat = vehicle.location.global_frame.lat 
 		e_lon = vehicle.location.global_frame.lon
-		e_heading = vehicle.heading * pi/180
+		e_heading = vehicle.heading * pi/180		# convert heading to radians
 		#------------------ get e_lat,e_lon, e_orient ---------------------
 		
 		
 		x_e,y_e = latlongtoxy(e_lat,e_lon,g_lat)			#change latitude and longitude to xy
-		dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
-		rc1, rc3 = dxdytorc(dx,dy, e_heading,g_lon)						#get rc parameters
-		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)
-		print (rc1, rc3,dist)
 		
+		#x,y are given to approach victim function as y,x to algin the north heading and direction in x,y
+		
+		dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
+		rc1, rc3 = dxdytorc(dx,dy, e_heading,g_lon)					#get rc parameters
+		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)				#haversine distance
+
+		current_time = time.time() - start_time		
+		print (current_time, e_heading*180/pi, dist)
+		dstore.append(dist)
+		hstore.append(e_heading*180/pi)
 		#code for sending the writing the rc commands
 		vehicle.channels.overrides = {'3':rc3}
-		time.sleep(1)
+		time.sleep(0.5)
 		vehicle.channels.overrides = {'1':rc1}
-		time.sleep(1)
+		time.sleep(0.5)
+	plt.plot(dstore)
+	plt.show()
+	plt.plot(hstore)
+	plt.show()
 
+def turn_towards(heading):				
+	"""
+	function to initially point the robot towards goal
+	This can also be done by the potential fields but with potential fields robot will move wildly 
+	at the starting position
+	"""
+	head = vehicle.heading
+	rc1 = 1900
+	while True:
+		if(head > heading - 20 and head < heading + 20):
+			break
+		vehicle.channels.overrides = {'3':1525}
+		time.sleep(0.5)
+		vehicle.channels.overrides = {'1':rc1}
+		time.sleep(0.5)
+		head = vehicle.heading
 
-def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
+def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
+	"""
+	Alternative approach gps function with approximate linear potential fields
+	"""
 	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
 	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
 	
@@ -171,21 +171,6 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
 	vehicle.channels.overrides = {'1':1500}
 	time.sleep(1)
 
-
-
-
-def turn_towards(heading):
-	head = vehicle.heading
-	rc1 = 1900
-	while True:
-		if(head > heading - 10 and head < heading + 10):
-			break
-		vehicle.channels.overrides = {'3':1525}
-		time.sleep(1)
-		vehicle.channels.overrides = {'1':rc1}
-		time.sleep(1)
-		head = vehicle.heading
-
 		
 def arm_and_takeoff(aTargetAltitude):
     """
@@ -217,51 +202,23 @@ head = vehicle.heading
 arm_and_takeoff(100)
 
 time.sleep(1)
-vehicle.mode = VehicleMode("MANUAL")
+vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
 time.sleep(1)
-vehicle.armed = True
+vehicle.armed = True					# arm the vehicle
 time.sleep(1)
 
-#vehicle.channels.overrides = {'3':1600}
-#time.sleep(1)
-#vehicle.channels.overrides = {'1':1900}
-#time.sleep(3)
+# ---------------------call the approach_gps2 function (this is the main function)---------------------------------
+#move_random()				# function call for moving to a random location
 
-#print ("\nI am here!")
-dist = haver_distance(vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, 30.618851, -96.336629)
-head = get_heading(vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, 30.618851, -96.336629)
-print ("Distance")
-print(dist)
-print("Heading")
-print(head)
+approach_gps(30.618851,-96.336629, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
 
+#-------------------------------------------------------------------------------------------------------------------
 
-
-#turn_towards(head)
-x_e,y_e = latlongtoxy(vehicle.location.global_frame.lat,vehicle.location.global_frame.lon,30.619651)
-print("x:")
-print(x_e)
-print("y:")
-print(y_e)
-
-move_random()
-approach_gps2(30.618851,-96.336629, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, Parameters)
-
-'''
-while True:
-	if(head > 280 and head < 290):
-		break
-	vehicle.channels.overrides = {'3':1510}
-	vehicle.channels.overrides = {'1':1900}
-	head = vehicle.heading
-	#print (head)
-
-'''
 time.sleep(1)
-#print ("\nI am here!")
+
 #Close vehicle object before exiting script 
 def savecounter():
-	print (vehicle.heading)
+	
 	print ("\nClose vehicle object")
 	vehicle.channels.overrides = {'3':1500}
 	time.sleep(1)
