@@ -38,7 +38,7 @@ tangential_select_gain = 0.1		# tangential field gain in select region
 tangential_control_gain = 0.8		# tangential field gain in control region
 att_select_gain = 1			# tangential field gain in control region
 att_control_gain = 0.8			# tangential field gain in control region
-pose_radians = pi/4			# the pose robot should achieve at the goal
+pose_radians = pi/3			# the pose robot should achieve at the goal
 select_radians = pi/4			# select region angle
 
 Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, 		tangential_control_gain, att_select_gain, att_control_gain]
@@ -53,8 +53,8 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	
 	print ("\n HERE I AM\n\n")
 	
-	
 	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
+	initial_dist = dist
 	print (dist)
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
 	turn_towards(heading)						#turn towards the goal initially
@@ -89,10 +89,14 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		time.sleep(0.5)
 		vehicle.channels.overrides = {'1':rc1}
 		time.sleep(0.5)
+	print(initial_dist)
+	print("intial ", emily_lat_start,emily_lon_start)	
+	print("final ",e_lat,e_lon)
 	plt.plot(dstore)
 	plt.show()
 	plt.plot(hstore)
 	plt.show()
+	
 
 def turn_towards(heading):				
 	"""
@@ -207,8 +211,20 @@ time.sleep(1)
 vehicle.armed = True					# arm the vehicle
 time.sleep(1)
 
+def move_random():						#function for moving to a random place
+	vehicle.channels.overrides = {'3':1900}
+	time.sleep(1)
+	rc3 = 1600						# give random direction
+	vehicle.channels.overrides = {'1':rc3}
+	time.sleep(1)
+	i = 30
+	while(i>0):
+		time.sleep(1)
+		vehicle.channels.overrides = {'3':1900}		# move at full speed for 30 seconds
+		i = i - 1;
+
 # ---------------------call the approach_gps2 function (this is the main function)---------------------------------
-#move_random()				# function call for moving to a random location
+move_random()				# function call for moving to a random location
 
 approach_gps(30.618851,-96.336629, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
 

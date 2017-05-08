@@ -49,17 +49,6 @@ def latlongtoxy(lat,lon,goal_lat):					#conversion from latitude, longitude to x
 	y = r*lat
 	return [x, y]
 
-def move_random():						#function for moving to a random place
-	vehicle.channels.overrides = {'3':1900}
-	time.sleep(1)
-	rc3 = 1700						# give random direction
-	vehicle.channels.overrides = {'1':rc3}
-	time.sleep(1)
-	i = 30
-	while(i>0):
-		time.sleep(1)
-		vehicle.channels.overrides = {'3':1900}		# move at full speed for 30 seconds
-		i = i - 1;
 
 
 def get_heading(lat1, long1, lat2, long2):
@@ -68,9 +57,6 @@ def get_heading(lat1, long1, lat2, long2):
 	bearing = (bearing + 360) % 360
 	bearing = bearing
 	return bearing
-
-
-
 
 
 	
