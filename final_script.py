@@ -9,6 +9,9 @@ from defined import *
 
 # Set up option parsing to get connection string
 import argparse
+## Eric
+####################################################################################################
+## Eric:TODO Move to main section
 parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
 parser.add_argument('--connect',
                     help="Vehicle connection target string. If not specified, SITL automatically started and used.")
@@ -28,6 +31,9 @@ if not connection_string:
 # Connect to the Vehicle
 #print ('Connecting to vehicle on: %s') % connection_string
 vehicle = connect(connection_string, wait_ready=False)
+
+
+####################################################################################################
 
 # Define all the parameters here
 r = 6371000 				# 6378km optional # Radius of earth in kilometers. Use 3956 for miles
@@ -55,9 +61,13 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	
 	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
 	initial_dist = dist
-	print (dist)
+	
+	print ('Distance: ',dist)
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
-	turn_towards(heading)						#turn towards the goal initially
+        print ('After get heading')
+	#turn_towards(heading)
+	print ('After Turn towards')
+	#turn towards the goal initially
 	
 	start_time = time.time()
 	current_time = 0
@@ -81,13 +91,16 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)				#haversine distance
 
 		current_time = time.time() - start_time		
+		print ("Time, Heading, Distance")
 		print (current_time, e_heading*180/pi, dist)
 		dstore.append(dist)
 		hstore.append(e_heading*180/pi)
 		#code for sending the writing the rc commands
-		vehicle.channels.overrides = {'3':rc3}
-		time.sleep(0.5)
+		# 3 is the thrust control
+		#vehicle.channels.overrides = {'3':rc3}
+		#time.sleep(0.5)
 		vehicle.channels.overrides = {'1':rc1}
+		print (rc1)
 		time.sleep(0.5)
 	print(initial_dist)
 	print("intial ", emily_lat_start,emily_lon_start)	
@@ -104,15 +117,20 @@ def turn_towards(heading):
 	This can also be done by the potential fields but with potential fields robot will move wildly 
 	at the starting position
 	"""
+	print ("In turn towards:")
 	head = vehicle.heading
+	print ("Vehicle Heading: ",head)
+	print ("Target Heading: ",heading)
 	rc1 = 1900
 	while True:
 		if(head > heading - 20 and head < heading + 20):
 			break
-		vehicle.channels.overrides = {'3':1525}
-		time.sleep(0.5)
+		#vehicle.channels.overrides = {'3':1525}
+		#time.sleep(0.5)
+		print ("Vehicle Heading: ",head)
+	        print ("Target Heading: ",heading)
 		vehicle.channels.overrides = {'1':rc1}
-		time.sleep(0.5)
+		#time.sleep(0.5)
 		head = vehicle.heading
 
 def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
@@ -134,22 +152,13 @@ def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
 		diff = 2 * diff
 		rc1 = diff + 1500
 		#code for sending the writing the rc commands
-		vehicle.channels.overrides = {'3':1900}
+		#vehicle.channels.overrides = {'3':1900}
 		time.sleep(1)
 		vehicle.channels.overrides = {'1':rc1}
 		time.sleep(1)
 
 		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
 		print (rc1, 1600, dist)
-#have a picture of the robot
-#figures from simulation\ screenshot
-#numbers are always good
-#do abstract first
-# then approach and implementation
-#experimient design
-#then rest
-#put claims and novelty in abstract / contributions
-#image stiching https://uk.pinterest.com/explore/time-lapse-photography/
 	while(dist >= goal_radius):
 		rc1 = 0	
 		rc3 = 200
@@ -161,7 +170,7 @@ def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
 
 		
 		#code for sending the writing the rc commands
-		vehicle.channels.overrides = {'3':rc3}
+		#vehicle.channels.overrides = {'3':rc3}
 		time.sleep(1)
 		vehicle.channels.overrides = {'1':rc1}
 		time.sleep(1)
@@ -198,21 +207,21 @@ def arm_and_takeoff(aTargetAltitude):
         time.sleep(1)
 	
 
-
+# Eric This should be moved to main
 print (vehicle.location.global_frame.lat)
 print (vehicle.location.global_frame.lon)
 print (vehicle.heading)
 head = vehicle.heading
-arm_and_takeoff(100)
+#arm_and_takeoff(100)
 
 time.sleep(1)
-vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
+#vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
 time.sleep(1)
 vehicle.armed = True					# arm the vehicle
 time.sleep(1)
 
 def move_random():						#function for moving to a random place
-	vehicle.channels.overrides = {'3':1900}
+	#vehicle.channels.overrides = {'3':1900}
 	time.sleep(1)
 	rc3 = 1600						# give random direction
 	vehicle.channels.overrides = {'1':rc3}
@@ -220,13 +229,23 @@ def move_random():						#function for moving to a random place
 	i = 30
 	while(i>0):
 		time.sleep(1)
-		vehicle.channels.overrides = {'3':1900}		# move at full speed for 30 seconds
+		#vehicle.channels.overrides = {'3':1900}		# move at full speed for 30 seconds
 		i = i - 1;
 
-# ---------------------call the approach_gps2 function (this is the main function)---------------------------------
-move_random()				# function call for moving to a random location
 
-approach_gps(30.618851,-96.336629, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
+## Eric:TODO Move this into a if __name__ == "__main__" 
+# ---------------------call the approach_gps2 function (this is the main function)---------------------------------
+#move_random()				# function call for moving to a random location
+
+## Eric:NOTE This calls  the first approach_gps function and not approach_gps2. Does the other not work???
+
+# ERIC Test
+#vehicle.channels.overrides = {'1':1100}
+#time.sleep(5)
+#vehicle.channels.overrides = {'1':1900}
+tempGoalX = 30.619022
+tempGoalY = -96.338946
+approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
 
 #-------------------------------------------------------------------------------------------------------------------
 
@@ -236,13 +255,13 @@ time.sleep(1)
 def savecounter():
 	
 	print ("\nClose vehicle object")
-	vehicle.channels.overrides = {'3':1500}
-	time.sleep(1)
+	#vehicle.channels.overrides = {'3':1500}
+	#time.sleep(1)
 	vehicle.channels.overrides = {'1':1500}
 	time.sleep(1)	
 	vehicle.channels.overrides = {}
 	time.sleep(1)
-	vehicle.mode = VehicleMode("RTL")
+	#vehicle.mode = VehicleMode("RTL")
 	vehicle.close()
 
 
