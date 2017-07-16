@@ -10,6 +10,8 @@ from defined import *
 # Set up option parsing to get connection string
 import argparse
 
+# rc1 is the rudder control and rc3 is the throttle (Note: both are PWM).
+
 ####################################################################################################
 
 # Define all the parameters here
@@ -28,6 +30,7 @@ enableThrottle = True	#Set to false to disable all thrust commands. Rudder comma
 
 Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
 
+# Wrapper for sending throttle commands. Throttle disabled if enableThrottle= False in config file.
 def sendThrottleCommand(pwm,throttle):
 	if throttle:
 		vehicle.channels.overrides = {'3':pwm}
@@ -35,7 +38,8 @@ def sendThrottleCommand(pwm,throttle):
 		print ("Throttle disabled. PWM sent: ",pwm)
 		return
 
-def readParametersFromCSV(filename = "config.txt"):
+# Read Parameters from a config file.
+def readParametersFromConfig(filename = "config.txt"):
 	configFile = open(filename, 'r')
 
 def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Parameters): #approach a gps position using potential fields
@@ -87,9 +91,10 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		# 3 is the thrust control
 		#vehicle.channels.overrides = {'3':rc3}
 		sendThrottleCommand(rc3, enableThrottle)
-		#time.sleep(0.5)
+		time.sleep(0.5)
 		vehicle.channels.overrides = {'1':rc1}
-		print (rc1)
+		print ("Rudder: ",rc1)
+		print ("Throttle: ",rc3)
 		time.sleep(0.5)
 	print(initial_dist)
 	print("intial ", emily_lat_start,emily_lon_start)
@@ -186,6 +191,7 @@ def arm_and_takeoff(aTargetAltitude):
 
     print("Arming Throttle")
     # Copter should arm in GUIDED mode
+	# XXX : what the heck is this?
     #vehicle.mode = VehicleMode("GUIDED")
     vehicle.armed = True
 
@@ -195,6 +201,7 @@ def arm_and_takeoff(aTargetAltitude):
         time.sleep(1)
 
 def move_random():						#function for moving to a random place
+	print("In move_random")
 	#vehicle.channels.overrides = {'3':1900}
 	sendThrottleCommand(1900, enableThrottle)
 	time.sleep(1)
