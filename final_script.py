@@ -9,29 +9,6 @@ from defined import *
 
 # Set up option parsing to get connection string
 import argparse
-## Eric
-####################################################################################################
-## Eric:TODO Move to main section
-parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
-parser.add_argument('--connect',
-                    help="Vehicle connection target string. If not specified, SITL automatically started and used.")
-args = parser.parse_args()
-
-connection_string = args.connect
-sitl = None
-
-
-# Start SITL if no connection string specified
-if not connection_string:
-    import dronekit_sitl
-    sitl = dronekit_sitl.start_default()
-    connection_string = sitl.connection_string()
-
-
-# Connect to the Vehicle
-#print ('Connecting to vehicle on: %s') % connection_string
-vehicle = connect(connection_string, wait_ready=False)
-
 
 ####################################################################################################
 
@@ -47,28 +24,39 @@ att_control_gain = 0.8			# tangential field gain in control region
 pose_radians = pi/3			# the pose robot should achieve at the goal
 select_radians = pi/4			# select region angle
 
-Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, 		tangential_control_gain, att_select_gain, att_control_gain]
+enableThrottle = True	#Set to false to disable all thrust commands. Rudder commands still active.
 
+Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
+
+def sendThrottleCommand(pwm,throttle):
+	if throttle:
+		vehicle.channels.overrides = {'3':pwm}
+	else:
+		print ("Throttle disabled. PWM sent: ",pwm)
+		return
+
+def readParametersFromCSV(filename = "config.txt"):
+	configFile = open(filename, 'r')
 
 def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Parameters): #approach a gps position using potential fields
 	"""
-	# This is the main function through which emily appraoches a gps location by potential fields	
+	# This is the main function through which emily appraoches a gps location by potential fields
 	"""
 	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
 	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
-	
+
 	print ("\n HERE I AM\n\n")
-	
+
 	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
 	initial_dist = dist
-	
+
 	print ('Distance: ',dist)
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
         print ('After get heading')
 	#turn_towards(heading)
 	print ('After Turn towards')
 	#turn towards the goal initially
-	
+
 	start_time = time.time()
 	current_time = 0
 	dstore = []
@@ -76,21 +64,21 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	while(dist >= goal_radius):
 
 		#------------ code for reading gps location of emily and its orientation ------
-		e_lat = vehicle.location.global_frame.lat 
+		e_lat = vehicle.location.global_frame.lat
 		e_lon = vehicle.location.global_frame.lon
 		e_heading = vehicle.heading * pi/180		# convert heading to radians
 		#------------------ get e_lat,e_lon, e_orient ---------------------
-		
-		
+
+
 		x_e,y_e = latlongtoxy(e_lat,e_lon,g_lat)			#change latitude and longitude to xy
-		
+
 		#x,y are given to approach victim function as y,x to algin the north heading and direction in x,y
-		
+
 		dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
 		rc1, rc3 = dxdytorc(dx,dy, e_heading,g_lon)					#get rc parameters
 		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)				#haversine distance
 
-		current_time = time.time() - start_time		
+		current_time = time.time() - start_time
 		print ("Time, Heading, Distance")
 		print (current_time, e_heading*180/pi, dist)
 		dstore.append(dist)
@@ -98,23 +86,23 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		#code for sending the writing the rc commands
 		# 3 is the thrust control
 		#vehicle.channels.overrides = {'3':rc3}
+		sendThrottleCommand(rc3, enableThrottle)
 		#time.sleep(0.5)
 		vehicle.channels.overrides = {'1':rc1}
 		print (rc1)
 		time.sleep(0.5)
 	print(initial_dist)
-	print("intial ", emily_lat_start,emily_lon_start)	
+	print("intial ", emily_lat_start,emily_lon_start)
 	print("final ",e_lat,e_lon)
 	plt.plot(dstore)
 	plt.show()
 	plt.plot(hstore)
 	plt.show()
-	
 
-def turn_towards(heading):				
+def turn_towards(heading):
 	"""
 	function to initially point the robot towards goal
-	This can also be done by the potential fields but with potential fields robot will move wildly 
+	This can also be done by the potential fields but with potential fields robot will move wildly
 	at the starting position
 	"""
 	print ("In turn towards:")
@@ -126,6 +114,7 @@ def turn_towards(heading):
 		if(head > heading - 20 and head < heading + 20):
 			break
 		#vehicle.channels.overrides = {'3':1525}
+		sendThrottleCommand(1525, enableThrottle)
 		#time.sleep(0.5)
 		print ("Vehicle Heading: ",head)
 	        print ("Target Heading: ",heading)
@@ -139,16 +128,16 @@ def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
 	"""
 	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
 	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
-	
+
 	print ("\n HERE I AM\n\n")
 	#This is the goal pose of EMILY. THis is done by adding 90 to current pose of EMILY
 	pose_rad = (vehicle.heading + 90) * (pi/180)
 	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
 	print (dist)
 	while(dist >= control_region_radius):
-		rc1 = 0				
+		rc1 = 0
 		head = get_heading(vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, g_lat, g_lon)
-		diff = head - vehicle.heading 
+		diff = head - vehicle.heading
 		diff = 2 * diff
 		rc1 = diff + 1500
 		#code for sending the writing the rc commands
@@ -160,15 +149,15 @@ def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
 		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
 		print (rc1, 1600, dist)
 	while(dist >= goal_radius):
-		rc1 = 0	
+		rc1 = 0
 		rc3 = 200
 		rc1 = 10*(400/(control_region_radius))
 		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
 		rc3 = (dist/control_region_radius) * rc3
-		rc3 = rc3 + 1500			
+		rc3 = rc3 + 1500
 		rc1 = rc1 + 1500
 
-		
+
 		#code for sending the writing the rc commands
 		#vehicle.channels.overrides = {'3':rc3}
 		time.sleep(1)
@@ -177,14 +166,13 @@ def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
 
 		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
 		print (rc1, rc3, dist)
-	
+
 	print ("\n REACHED THE ADMINISTRATION BUILDING!\n\n")
 	vehicle.channels.overrides = {'3': 1500}
 	time.sleep(1)
 	vehicle.channels.overrides = {'1':1500}
 	time.sleep(1)
 
-		
 def arm_and_takeoff(aTargetAltitude):
     """
     Arms vehicle and fly to aTargetAltitude.
@@ -205,23 +193,10 @@ def arm_and_takeoff(aTargetAltitude):
     while not vehicle.armed:
         print(" Waiting for arming...")
         time.sleep(1)
-	
-
-# Eric This should be moved to main
-print (vehicle.location.global_frame.lat)
-print (vehicle.location.global_frame.lon)
-print (vehicle.heading)
-head = vehicle.heading
-#arm_and_takeoff(100)
-
-time.sleep(1)
-#vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
-time.sleep(1)
-vehicle.armed = True					# arm the vehicle
-time.sleep(1)
 
 def move_random():						#function for moving to a random place
 	#vehicle.channels.overrides = {'3':1900}
+	sendThrottleCommand(1900, enableThrottle)
 	time.sleep(1)
 	rc3 = 1600						# give random direction
 	vehicle.channels.overrides = {'1':rc3}
@@ -230,52 +205,72 @@ def move_random():						#function for moving to a random place
 	while(i>0):
 		time.sleep(1)
 		#vehicle.channels.overrides = {'3':1900}		# move at full speed for 30 seconds
+		sendThrottleCommand(1900, enableThrottle)
 		i = i - 1;
-
-
-## Eric:TODO Move this into a if __name__ == "__main__" 
-# ---------------------call the approach_gps2 function (this is the main function)---------------------------------
-#move_random()				# function call for moving to a random location
 
 ## Eric:NOTE This calls  the first approach_gps function and not approach_gps2. Does the other not work???
 
-# ERIC Test
-#vehicle.channels.overrides = {'1':1100}
-#time.sleep(5)
-#vehicle.channels.overrides = {'1':1900}
-tempGoalX = 30.619022
-tempGoalY = -96.338946
-approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
-
-#-------------------------------------------------------------------------------------------------------------------
-
-time.sleep(1)
-
-#Close vehicle object before exiting script 
+#Close vehicle object before exiting script
 def savecounter():
-	
+
 	print ("\nClose vehicle object")
 	#vehicle.channels.overrides = {'3':1500}
+	sendThrottleCommand(1500, enableThrottle)
 	#time.sleep(1)
 	vehicle.channels.overrides = {'1':1500}
-	time.sleep(1)	
+	time.sleep(1)
 	vehicle.channels.overrides = {}
 	time.sleep(1)
 	#vehicle.mode = VehicleMode("RTL")
 	vehicle.close()
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
+    parser.add_argument('--connect',
+                        help="Vehicle connection target string. If not specified, SITL automatically started and used.")
+    args = parser.parse_args()
+    connection_string = args.connect
+    sitl = None
 
+    # Start SITL if no connection string specified
+    if not connection_string:
+        import dronekit_sitl
+        sitl = dronekit_sitl.start_default()
+        connection_string = sitl.connection_string()
 
-# Shut down simulator if it was started.
-if sitl is not None:
-    sitl.stop()
+    # Connect to the Vehicle
+    #print ('Connecting to vehicle on: %s') % connection_string
+    vehicle = connect(connection_string, wait_ready=False)
 
-print("Completed")
-import atexit
-atexit.register(savecounter)
+    print (vehicle.location.global_frame.lat)
+    print (vehicle.location.global_frame.lon)
+    print (vehicle.heading)
+    head = vehicle.heading
 
+    arm_and_takeoff(100)
 
+    time.sleep(1)
+    vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
+    time.sleep(1)
+    vehicle.armed = True					# arm the vehicle
+    time.sleep(1)
 
+    move_random()
 
+    #vehicle.channels.overrides = {'1':1100}
+    #time.sleep(5)
+    #vehicle.channels.overrides = {'1':1900}
 
+    # ---------------------call the approach_gps2 function (this is the main function)---------------------------------
+    tempGoalX = 30.619022
+    tempGoalY = -96.338946
+    approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
 
+    time.sleep(1)
+    # Shut down simulator if it was started.
+    if sitl is not None:
+        sitl.stop()
+
+    print("Completed")
+    import atexit
+    atexit.register(savecounter)
