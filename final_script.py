@@ -57,6 +57,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	print ('Distance: ',dist)
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
         print ('After get heading')
+	# Eric: I'm not sure if turn_towards is necessary for a successful run.
 	#turn_towards(heading)
 	print ('After Turn towards')
 	#turn towards the goal initially
@@ -100,6 +101,9 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	print("intial ", emily_lat_start,emily_lon_start)
 	print("final ",e_lat,e_lon)
 	plt.plot(dstore)
+	#plt.title('Distance form home vs time')
+	plt.xlabel("Time")
+	plt.ylabel('Distance')
 	plt.show()
 	plt.plot(hstore)
 	plt.show()
