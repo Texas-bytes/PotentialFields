@@ -26,7 +26,7 @@ att_control_gain = 0.8			# tangential field gain in control region
 pose_radians = pi/3			# the pose robot should achieve at the goal
 select_radians = pi/4			# select region angle
 
-enableThrottle = True	#Set to false to disable all thrust commands. Rudder commands still active.
+enableThrottle = False	#Set to false to disable all thrust commands. Rudder commands still active.
 
 Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
 
