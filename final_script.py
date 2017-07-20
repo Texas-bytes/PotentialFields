@@ -26,7 +26,12 @@ att_control_gain = 0.8			# tangential field gain in control region
 pose_radians = pi/3			# the pose robot should achieve at the goal
 select_radians = pi/4			# select region angle
 
-enableThrottle = False	#Set to false to disable all thrust commands. Rudder commands still active.
+enableThrottle = True	#Set to false to disable all thrust commands. Rudder commands still active.
+# Minimum Throttle to turn EMILY (i.e. a physical robot.)
+minimumThrottle = 1600
+# Maximum difference of emily's initial orientation vs the orientation towards the goal.
+turnTowardsThreshold = 20
+
 
 Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
 
@@ -58,7 +63,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
         print ('After get heading')
 	# Eric: I'm not sure if turn_towards is necessary for a successful run.
-	#turn_towards(heading)
+	turn_towards(heading)
 	print ('After Turn towards')
 	#turn towards the goal initially
 
@@ -108,6 +113,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	plt.plot(hstore)
 	plt.show()
 
+# Eric
 def turn_towards(heading):
 	"""
 	function to initially point the robot towards goal
@@ -120,15 +126,14 @@ def turn_towards(heading):
 	print ("Target Heading: ",heading)
 	rc1 = 1900
 	while True:
-		if(head > heading - 20 and head < heading + 20):
+		if(head > heading - turnTowardsThreshold and head < heading + turnTowardsThreshold):
 			break
-		#vehicle.channels.overrides = {'3':1525}
-		sendThrottleCommand(1525, enableThrottle)
+		sendThrottleCommand(minimumThrottle, enableThrottle)
 		#time.sleep(0.5)
 		print ("Vehicle Heading: ",head)
 	        print ("Target Heading: ",heading)
 		vehicle.channels.overrides = {'1':rc1}
-		#time.sleep(0.5)
+		time.sleep(0.2)
 		head = vehicle.heading
 
 def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
