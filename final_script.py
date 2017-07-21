@@ -44,6 +44,7 @@ def sendThrottleCommand(pwm,throttle):
 		return
 
 # Read Parameters from a config file.
+# Eric TODO: Create a json or csv to store global params
 def readParametersFromConfig(filename = "config.txt"):
 	configFile = open(filename, 'r')
 
@@ -63,7 +64,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
         print ('After get heading')
 	# Eric: I'm not sure if turn_towards is necessary for a successful run.
-	turn_towards(heading)
+	#turn_towards(heading)
 	print ('After Turn towards')
 	#turn towards the goal initially
 
@@ -101,6 +102,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		vehicle.channels.overrides = {'1':rc1}
 		print ("Rudder: ",rc1)
 		print ("Throttle: ",rc3)
+		saveToLog(e_lat, e_lon,dist,rc1,rc3)
 		time.sleep(0.5)
 	print(initial_dist)
 	print("intial ", emily_lat_start,emily_lon_start)
@@ -135,57 +137,6 @@ def turn_towards(heading):
 		vehicle.channels.overrides = {'1':rc1}
 		time.sleep(0.2)
 		head = vehicle.heading
-
-def approach_gps2(g_lat,g_lon,emily_lat_start, emily_lon_start, Parameters):
-	"""
-	Alternative approach gps function with approximate linear potential fields
-	"""
-	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
-	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
-
-	print ("\n HERE I AM\n\n")
-	#This is the goal pose of EMILY. THis is done by adding 90 to current pose of EMILY
-	pose_rad = (vehicle.heading + 90) * (pi/180)
-	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
-	print (dist)
-	while(dist >= control_region_radius):
-		rc1 = 0
-		head = get_heading(vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, g_lat, g_lon)
-		diff = head - vehicle.heading
-		diff = 2 * diff
-		rc1 = diff + 1500
-		#code for sending the writing the rc commands
-		#vehicle.channels.overrides = {'3':1900}
-		time.sleep(1)
-		vehicle.channels.overrides = {'1':rc1}
-		time.sleep(1)
-
-		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
-		print (rc1, 1600, dist)
-	while(dist >= goal_radius):
-		rc1 = 0
-		rc3 = 200
-		rc1 = 10*(400/(control_region_radius))
-		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
-		rc3 = (dist/control_region_radius) * rc3
-		rc3 = rc3 + 1500
-		rc1 = rc1 + 1500
-
-
-		#code for sending the writing the rc commands
-		#vehicle.channels.overrides = {'3':rc3}
-		time.sleep(1)
-		vehicle.channels.overrides = {'1':rc1}
-		time.sleep(1)
-
-		dist =  haver_distance(g_lat, g_lon, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
-		print (rc1, rc3, dist)
-
-	print ("\n REACHED THE ADMINISTRATION BUILDING!\n\n")
-	vehicle.channels.overrides = {'3': 1500}
-	time.sleep(1)
-	vehicle.channels.overrides = {'1':1500}
-	time.sleep(1)
 
 def arm_and_takeoff(aTargetAltitude):
     """
@@ -224,11 +175,8 @@ def move_random():						#function for moving to a random place
 		sendThrottleCommand(1900, enableThrottle)
 		i = i - 1;
 
-## Eric:NOTE This calls  the first approach_gps function and not approach_gps2. Does the other not work???
-
 #Close vehicle object before exiting script
 def savecounter():
-
 	print ("\nClose vehicle object")
 	#vehicle.channels.overrides = {'3':1500}
 	sendThrottleCommand(1500, enableThrottle)
@@ -278,8 +226,8 @@ if __name__ == "__main__":
     #vehicle.channels.overrides = {'1':1900}
 
     # ---------------------call the approach_gps2 function (this is the main function)---------------------------------
-    tempGoalX = 30.619022
-    tempGoalY = -96.338946
+    tempGoalX = 30.618230
+    tempGoalY = -96.336466
     approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
 
     time.sleep(1)
@@ -290,3 +238,7 @@ if __name__ == "__main__":
     print("Completed")
     import atexit
     atexit.register(savecounter)
+
+'''
+Create log file to write rudder direction, emily position, distance, etc...
+'''

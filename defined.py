@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from os.path import isfile
 from math import asin, sin, cos, tan, sqrt, atan, atan2, radians, pi, degrees
 
 r = 6371000					        # radius of earth in meters
@@ -8,6 +9,16 @@ rudder_min = 1100
 rudder_max = 1900
 throttle_min = 1520
 throttle_max = 1900
+
+def saveToLog(emilyXLocation, emilyYLocation,distance,rudderPWM,throttlePWM):
+	if isfile('log.csv'):
+		f = open('log.csv', 'a')
+		f.write(str(emilyXLocation) + ',' + str(emilyYLocation) + ',' + str(distance) + ',' + str(rudderPWM) + ',' + str(throttlePWM) + '\n')
+	else:
+		f = open("log.csv" , 'w+')
+		f.write('emilyXLocation, emilyYLocation, distance, rudderPWM, throttlePWM,\n')
+		f.write(str(emilyXLocation) + ',' + str(emilyYLocation) + ',' + str(distance) + ',' + str(rudderPWM) + ',' + str(throttlePWM) + '\n')
+	f.close()
 
 def haver_distance(lat1, lon1, lat2, lon2):		# haversine distance formula
 	#Calculate the great circle distance between two points
@@ -65,13 +76,14 @@ def vectorToRC(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vect
 	if(theta < 0):
 		#Make theta positive e.g. -90 -> 270.
 		theta = theta + 2*pi
-		print "Theta: ", theta
+	print "Theta: ", theta
 	headingDifference = theta - e_orentation_rad			# Difference between emily heading and field vector
+	print 'Heading Difference: ',headingDifference
 	# it might need to change if heading is with respect to magnetic north
 	kp = PID / 1000.0
 
 	if(abs(headingDifference) < pi):
-		if(headingDifference < pi/6):
+		if(headingDifference < pi/6.0):
 			rc1 = kp * headingDifference
 		else:
 			if theta > e_orientation_rad:
@@ -81,11 +93,11 @@ def vectorToRC(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vect
 	elif (abs(headingDifference) >= pi):
 		if theta > e_orientation_rad:
 			# not the same as headingDifference
-			angle_difference = headingDifference - 360
+			angle_difference = headingDifference - 2.0*pi
 		else:
-			angle_difference = headingDifference + 360
+			angle_difference = headingDifference + 2.0*pi
 
-		if (abs(angle_difference) <30):
+		if (abs(angle_difference) <pi/6.0):
 			rc1 = kp * angle_difference
 		else:
 			if angle_difference > 0:
