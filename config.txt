@@ -1,0 +1,17 @@
+earthRadius = 6371000
+goal_radius = 2
+control_region_radius = 200
+ballistic_region_gain = 1
+tangential_select_gain = 0.1
+tangential_control_gain = 0.8
+att_select_gain = 1
+att_control_gain = 0.8
+pose_radians = pi/3
+select_radians = pi/4
+enableThrottle = True
+throttle_min = 1520
+throttle_max = 1900
+rudder_min = 1100
+rudder_max = 1900
+turnTowardsThreshold = 20
+PID = 20

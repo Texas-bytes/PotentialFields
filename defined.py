@@ -3,13 +3,6 @@ import matplotlib.pyplot as plt
 from os.path import isfile
 from math import asin, sin, cos, tan, sqrt, atan, atan2, radians, pi, degrees
 
-r = 6371000					        # radius of earth in meters
-PID = 20.0
-rudder_min = 1100
-rudder_max = 1900
-throttle_min = 1520
-throttle_max = 1900
-
 def saveToLog(emilyXLocation, emilyYLocation,distance,rudderPWM,throttlePWM):
 	if isfile('log.csv'):
 		f = open('log.csv', 'a')

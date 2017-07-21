@@ -9,31 +9,8 @@ from defined import *
 
 # Set up option parsing to get connection string
 import argparse
-
-# rc1 is the rudder control and rc3 is the throttle (Note: both are PWM).
-
-####################################################################################################
-
-# Define all the parameters here
-r = 6371000 				# 6378km optional # Radius of earth in kilometers. Use 3956 for miles
-goal_radius = 2				# the radius at which robot will stop
-control_region_radius = 200		# the radius at which try robot starts to worry about pose
-ballistic_region_gain = 1		# attractive field gain in ballistic region
-tangential_select_gain = 0.1		# tangential field gain in select region
-tangential_control_gain = 0.8		# tangential field gain in control region
-att_select_gain = 1			# tangential field gain in control region
-att_control_gain = 0.8			# tangential field gain in control region
-pose_radians = pi/3			# the pose robot should achieve at the goal
-select_radians = pi/4			# select region angle
-
-enableThrottle = True	#Set to false to disable all thrust commands. Rudder commands still active.
-# Minimum Throttle to turn EMILY (i.e. a physical robot.)
-minimumThrottle = 1600
-# Maximum difference of emily's initial orientation vs the orientation towards the goal.
-turnTowardsThreshold = 20
-
-
-Parameters = [goal_radius, control_region_radius, select_radians, ballistic_region_gain, tangential_select_gain, tangential_control_gain, att_select_gain, att_control_gain]
+# New Global Parameters. Delete Old parameters object after testing.
+PARAMETERS = {}
 
 # Wrapper for sending throttle commands. Throttle disabled if enableThrottle= False in config file.
 def sendThrottleCommand(pwm,throttle):
@@ -46,7 +23,19 @@ def sendThrottleCommand(pwm,throttle):
 # Read Parameters from a config file.
 # Eric TODO: Create a json or csv to store global params
 def readParametersFromConfig(filename = "config.txt"):
-	configFile = open(filename, 'r')
+	if isfile(filename):
+		print ("Read from ",filename,': ')
+		configFile = open(filename, 'r')
+		try:
+			for paramString in configFile:
+				row = paramString.split('=')
+				PARAMETERS[row[0]] = row[1].rstrip('\n')
+			print (PARAMETERS)
+		except:
+			print ("Config file format is parameter_name = value with one parameter per line.")
+	else:
+		print (filename," not found!")
+
 
 def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Parameters): #approach a gps position using potential fields
 	"""
@@ -188,6 +177,7 @@ def savecounter():
 	#vehicle.mode = VehicleMode("RTL")
 	vehicle.close()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
     parser.add_argument('--connect',
@@ -238,7 +228,10 @@ if __name__ == "__main__":
     print("Completed")
     import atexit
     atexit.register(savecounter)
-
+'''
+if __name__=="__main__":
+	readParametersFromConfig()
+'''
 '''
 Create log file to write rudder direction, emily position, distance, etc...
 '''

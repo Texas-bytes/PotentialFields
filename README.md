@@ -23,3 +23,16 @@ When running for EMILY run (order matters):
 mavproxy.py --master=tcp:127.0.0.1:5760 --out=udpout:127.0.0.1:14550 --map
 
 python final_script.py --connect 127.0.0.1:14550
+
+THE CONFIG FILE
+===============================
+r is the radius of earth in kilometers
+goal_radius is the radius at which robot will stop
+control_region_radius is the radius at which try robot starts to worry about pose
+ballistic_region_gain is the attractive field gain in ballistic region. ???
+tangential_select_gain is the tangential field gain in the select region.
+tangential_control_gain is the tangential field gain in the control region.
+att_select_gain ???
+att_control_gain ???
+pose_radians = pi/3			# the pose robot should achieve at the goal
+select_radians = pi/4			# select region angle
