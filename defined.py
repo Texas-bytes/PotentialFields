@@ -35,7 +35,7 @@ def haver_distance(lat1, lon1, lat2, lon2):		# haversine distance formula
 	return c * r
 
 
-def dxdytorc(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
+def dxdytorc(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
 	print "In dxdytorc"
 	#This is the physical limit of the rudder servos.
 	# XXX : Not sure if this is affecting the rudder turning ability???
@@ -51,7 +51,7 @@ def dxdytorc(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vector
 		#Make theta positive e.g. -90 -> 270.
 		theta = theta + 2*pi
 		print "Theta: ", theta
-	headingDifference = theta - e_orentation_rad			# Difference between emily heading and field vector
+	headingDifference = theta - e_orientation_rad			# Difference between emily heading and field vector
 	# it might need to change if heading is with respect to magnetic north
 	if(abs(headingDifference) <= 180):
 		# we found sin(a) to be the right function for control
@@ -65,7 +65,7 @@ def dxdytorc(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vector
 	return round(rc1), round(rc3)
 
 # ALL UNITS ARE IN RADIANS.
-def vectorToRC(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
+def vectorToRC(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
 	print "In vectorToRC"
 	# XXX : Not sure if this is affecting the rudder turning ability???
 	rudder_span_rad = pi*2			#span of angle in radians
@@ -77,7 +77,7 @@ def vectorToRC(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vect
 		#Make theta positive e.g. -90 -> 270.
 		theta = theta + 2*pi
 	print "Theta: ", theta
-	headingDifference = theta - e_orentation_rad			# Difference between emily heading and field vector
+	headingDifference = theta - e_orientation_rad			# Difference between emily heading and field vector
 	print 'Heading Difference: ',headingDifference
 	# it might need to change if heading is with respect to magnetic north
 	kp = PID / 1000.0
@@ -151,6 +151,17 @@ def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):		#gen
 		dy = 0
 	return dx,dy
 
+def attractiveField(xGoal, yGoal, xEmily, yEmily, gain = 1.0):
+	dx, dy = 0, 0
+	dist = sqrt((xGoal - xEmily)**2 + (yGoal - yEmily)**2)
+	theta = atan2((yGoal - yEmily),(xGoal - xEmily))
+	print ('Theta: ',theta)
+	# TODO Tweak the gain
+	dx = gain*cos(theta)
+	dy = gain*sin(theta)
+
+	return dx, dy
+
 def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_rad):	#generate tangential field
 
 
@@ -206,6 +217,12 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 	if(distance > max_r):
 		dx = 0
 		dy = 0
+	return dx,dy
+
+def approachVictim(xGoal, yGoal, xEmily, yEmily, pose, Parameters):
+	dx,dy = attractiveField(xGoal, yGoal, xEmily,yEmily)
+	print('dx: ', dx)
+	print('dy: ', dy)
 	return dx,dy
 
 def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#approach victim behaviour
@@ -329,3 +346,6 @@ def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_r
 	print Parameters[0]
 	ax.scatter(point_x,point_y)
 	plt.show()
+
+if __name__ == "__main__":
+	dx,dy = attractiveField(3,5,0,0)

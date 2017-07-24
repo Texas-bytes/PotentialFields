@@ -85,8 +85,10 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 
 		#x,y are given to approach victim function as y,x to algin the north heading and direction in x,y
 
-		dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
-		rc1, rc3 = dxdytorc(dx,dy, e_heading,g_lon)					#get rc parameters
+		dx,dy = approachVictim(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
+		print ('dx: ', dx)
+		print ('dy: ', dy)
+		rc1, rc3 = vectorToRC(dx,dy, e_heading,g_lon)					#get rc parameters
 		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)				#haversine distance
 
 		current_time = time.time() - start_time
