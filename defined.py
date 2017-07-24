@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from os.path import isfile
 from math import asin, sin, cos, tan, sqrt, atan, atan2, radians, pi, degrees
+import global_parameters
 
 def saveToLog(emilyXLocation, emilyYLocation,distance,rudderPWM,throttlePWM):
 	if isfile('log.csv'):
@@ -109,8 +110,8 @@ def vectorToRC(dx,dy,e_orentation_rad,goal_lon):		#convert potential fields vect
 
 def latlongtoxy(lat,lon,goal_lat):					#conversion from latitude, longitude to x,y coordinates
 	lat, lon,goal_lat = map(radians, [lat, lon, goal_lat])
-	x = r*lon*cos(goal_lat)						#x, y based on goal latitude
-	y = r*lat
+	x = global_parameters.PARAMETERS['earthRadius']*lon*cos(goal_lat)						#x, y based on goal latitude
+	y = global_parameters.PARAMETERS['earthRadius']*lat
 	return [x, y]
 
 def get_heading(lat1, long1, lat2, long2):
@@ -120,10 +121,11 @@ def get_heading(lat1, long1, lat2, long2):
 	bearing = bearing
 	return bearing
 
-def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):		#generate attractive field
-
+def att_potential_field(x_g, y_g, x_e, y_e, strength, type):		#generate attractive field
+	# max_r = inf soo is it pointless?
 	dx,dy = 0,0
-
+	max_r = float("inf")
+	control_region_radius = global_parameters.PARAMETERS['control_region_radius']
 	distance = sqrt((x_g - x_e)*(x_g - x_e) + (y_g - y_e)*(y_g - y_e)) 		# distance b/w emily and goal
 	theta = atan2((y_g - y_e),(x_g - x_e))						# angle
 	if(type == 'linear'):
@@ -146,7 +148,7 @@ def att_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type):		#gen
 
 def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_rad):	#generate tangential field
 
-
+	control_region_radius = global_parameters.PARAMETERS['control_region_radius']
 	dx,dy = 0,0
 
 	m = tan(pose_rad)							# slope of pose line
@@ -170,45 +172,48 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 		dy = 0
 	if((distance >= min_r) and (distance <= max_r)):		#tangential field nonzero only in radius range (min_r,max_r)
 		if(m>=0):
+			# I think this is the y component of the tangential vector.
+			poseLine = y_e - m*x_e - c1
+			perpendicularPose = y_e + (1/m)*x_e - c2
 			#tangential field has 4 different direction in 4 quadrants and the quadrants are defined according to 				direction of pose line and its perpendicular line
-			if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 >= 0)):
+			if((poseLine >= 0) and ( perpendicularPose>= 0)):
 				dx = Vmag*cos(theta + pi/2)
 				dy = Vmag*sin(theta + pi/2)
-			if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 < 0)):
+			if((poseLine >= 0) and (perpendicularPose < 0)):
 				dx = Vmag*cos(theta - pi/2)
 				dy = Vmag*sin(theta - pi/2)
-			if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 < 0)):
+			if((poseLine < 0) and (perpendicularPose < 0)):
 				dx = Vmag*cos(theta + pi/2)
 				dy = Vmag*sin(theta + pi/2)
-			if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 >= 0)):
+			if((poseLine < 0) and (perpendicularPose >= 0)):
 				dx = Vmag*cos(theta - pi/2)
 				dy = Vmag*sin(theta - pi/2)
 		else:
-			if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 >= 0)):
+			if((poseLine >= 0) and (perpendicularPose >= 0)):
 				dx = Vmag*cos(theta - pi/2)
 				dy = Vmag*sin(theta - pi/2)
-			if((y_e - m*x_e - c1 >= 0) and (y_e + (1/m)*x_e - c2 < 0)):
+			if((poseLine >= 0) and (perpendicularPose < 0)):
 				dx = Vmag*cos(theta + pi/2)
 				dy = Vmag*sin(theta + pi/2)
-			if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 < 0)):
+			if((poseLine < 0) and (perpendicularPose < 0)):
 				dx = Vmag*cos(theta - pi/2)
 				dy = Vmag*sin(theta - pi/2)
-			if((y_e - m*x_e - c1 < 0) and (y_e + (1/m)*x_e - c2 >= 0)):
+			if((poseLine < 0) and (perpendicularPose >= 0)):
 				dx = Vmag*cos(theta + pi/2)
 				dy = Vmag*sin(theta + pi/2)
-	if(distance > max_r):
+	elif(distance > max_r):
 		dx = 0
 		dy = 0
 	return dx,dy
 
-def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#approach victim behaviour
+def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad):			#approach victim behaviour
 	"""
 	# This function calls different fields in different regions and adds thier contribution
 	"""
 	dx,dy, dx_tan, dy_tan, dx_attc, dy_attc, dx_attb, dy_attb  = 0,0,0,0,0,0,0,0
 
 	#call attractive field in ballistic region
-	dx_attb,dy_attb  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[1],float("inf"), Parameters[3],'constant')
+	dx_attb,dy_attb  = att_potential_field(x_g,y_g,x_e,y_e,'constant')
 
 	m = tan(pose_rad)
 	c1 = y_g - tan(pose_rad)*x_g 								# intercept of pose line
@@ -298,7 +303,7 @@ def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_r
 	y3_line = (y3_line < -ymax)*(-ymax) + (y3_line > -ymax)*y3_line		#make zero if out of range
 
 	ax.plot(x,y2_line)										#plot of select region lines
-	ax.plot(x,y3_line)										#plot of select region lines
+	ax.plot(x,y3_line)										#plot acefof select region lines
 
 	#----------------robot simulation -----------------
 	x_e = x_e_start
@@ -322,3 +327,14 @@ def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_r
 	print Parameters[0]
 	ax.scatter(point_x,point_y)
 	plt.show()
+
+
+'''
+import unittest
+
+class TestFunctions(unittest.TestCase):
+
+
+if __name__=='__main__':
+	unittest.main()
+'''

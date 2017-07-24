@@ -1,16 +1,16 @@
 from __future__ import print_function
 import time
 from dronekit import connect, VehicleMode, LocationGlobalRelative
-
 import numpy as np						# needed mostly for plots
 import matplotlib.pyplot as plt					# needed mostly fot plots
 from math import asin, sin, cos, tan, sqrt, atan2, radians, pi
 from defined import *
 
+import global_parameters
 # Set up option parsing to get connection string
 import argparse
 # New Global Parameters. Delete Old parameters object after testing.
-PARAMETERS = {}
+
 
 # Wrapper for sending throttle commands. Throttle disabled if enableThrottle= False in config file.
 def sendThrottleCommand(pwm,throttle):
@@ -22,22 +22,10 @@ def sendThrottleCommand(pwm,throttle):
 
 # Read Parameters from a config file.
 # Eric TODO: Create a json or csv to store global params
-def readParametersFromConfig(filename = "config.txt"):
-	if isfile(filename):
-		print ("Read from ",filename,': ')
-		configFile = open(filename, 'r')
-		try:
-			for paramString in configFile:
-				row = paramString.split('=')
-				PARAMETERS[row[0]] = row[1].rstrip('\n')
-			print (PARAMETERS)
-		except:
-			print ("Config file format is parameter_name = value with one parameter per line.")
-	else:
-		print (filename," not found!")
 
 
-def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Parameters): #approach a gps position using potential fields
+
+def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start): #approach a gps position using potential fields
 	"""
 	# This is the main function through which emily appraoches a gps location by potential fields
 	"""
@@ -51,7 +39,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 
 	print ('Distance: ',dist)
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
-        print ('After get heading')
+	print ('After get heading')
 	# Eric: I'm not sure if turn_towards is necessary for a successful run.
 	#turn_towards(heading)
 	print ('After Turn towards')
@@ -74,7 +62,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 
 		#x,y are given to approach victim function as y,x to algin the north heading and direction in x,y
 
-		dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
+		dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e)	#get potential field vector
 		rc1, rc3 = dxdytorc(dx,dy, e_heading,g_lon)					#get rc parameters
 		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)				#haversine distance
 
@@ -84,7 +72,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		dstore.append(dist)
 		hstore.append(e_heading*180/pi)
 		#code for sending the writing the rc commands
-		# 3 is the thrust control
+		# 3 is the thrust controlacef
 		#vehicle.channels.overrides = {'3':rc3}
 		sendThrottleCommand(rc3, enableThrottle)
 		time.sleep(0.5)
@@ -104,65 +92,28 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 	plt.plot(hstore)
 	plt.show()
 
-# Eric
-def turn_towards(heading):
-	"""
-	function to initially point the robot towards goal
-	This can also be done by the potential fields but with potential fields robot will move wildly
-	at the starting position
-	"""
-	print ("In turn towards:")
-	head = vehicle.heading
-	print ("Vehicle Heading: ",head)
-	print ("Target Heading: ",heading)
-	rc1 = 1900
-	while True:
-		if(head > heading - turnTowardsThreshold and head < heading + turnTowardsThreshold):
-			break
-		sendThrottleCommand(minimumThrottle, enableThrottle)
-		#time.sleep(0.5)
-		print ("Vehicle Heading: ",head)
-	        print ("Target Heading: ",heading)
-		vehicle.channels.overrides = {'1':rc1}
-		time.sleep(0.2)
-		head = vehicle.heading
-
 def arm_and_takeoff(aTargetAltitude):
-    """
-    Arms vehicle and fly to aTargetAltitude.
-    """
+	"""
+	Arms vehicle and fly to aTargetAltitude.
+	"""
 
-    print("Basic pre-arm checks")
-    # Don't try to arm until autopilot is ready
-    while not vehicle.is_armable:
-        print(" Waiting for vehicle to initialise...")
-        time.sleep(1)
-
-    print("Arming Throttle")
-    # Copter should arm in GUIDED mode
-	# XXX : what the heck is this?
-    #vehicle.mode = VehicleMode("GUIDED")
-    vehicle.armed = True
-
-    # Confirm vehicle armed before attempting to take off
-    while not vehicle.armed:
-        print(" Waiting for arming...")
-        time.sleep(1)
-
-def move_random():						#function for moving to a random place
-	print("In move_random")
-	#vehicle.channels.overrides = {'3':1900}
-	sendThrottleCommand(1900, enableThrottle)
-	time.sleep(1)
-	rc3 = 1600						# give random direction
-	vehicle.channels.overrides = {'1':rc3}
-	time.sleep(1)
-	i = 30
-	while(i>0):
+	print("Basic pre-arm checks")
+	# Don't try to arm until autopilot is ready
+	while not vehicle.is_armable:
+		print(" Waiting for vehicle to initialise...")
 		time.sleep(1)
-		#vehicle.channels.overrides = {'3':1900}		# move at full speed for 30 seconds
-		sendThrottleCommand(1900, enableThrottle)
-		i = i - 1;
+
+	print("Arming Throttle")
+	# Copter should arm in GUIDED mode
+	# XXX : what the heck is this?
+	#vehicle.mode = VehicleMode("GUIDED")
+	vehicle.armed = True
+
+	# Confirm vehicle armed before attempting to take off
+	while not vehicle.armed:
+		print(" Waiting for arming...")
+		time.sleep(1)
+
 
 #Close vehicle object before exiting script
 def savecounter():
@@ -179,59 +130,63 @@ def savecounter():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
-    parser.add_argument('--connect',
-                        help="Vehicle connection target string. If not specified, SITL automatically started and used.")
-    args = parser.parse_args()
-    connection_string = args.connect
-    sitl = None
+	#Reads parameters from config file and intializes global variable.
+	global_parameters.init()
+	print ('-------------------------')
+	print (global_parameters.PARAMETERS)
+	parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
+	parser.add_argument('--connect',
+						help="Vehicle connection target string. If not specified, SITL automatically started and used.")
+	args = parser.parse_args()
+	connection_string = args.connect
+	sitl = None
 
-    # Start SITL if no connection string specified
-    if not connection_string:
-        import dronekit_sitl
-        sitl = dronekit_sitl.start_default()
-        connection_string = sitl.connection_string()
+	# Start SITL if no connection string specified
+	if not connection_string:
+		import dronekit_sitl
+		sitl = dronekit_sitl.start_default()
+		connection_string = sitl.connection_string()
 
-    # Connect to the Vehicle
-    #print ('Connecting to vehicle on: %s') % connection_string
-    vehicle = connect(connection_string, wait_ready=False)
+	# Connect to the Vehicle
+	#print ('Connecting to vehicle on: %s') % connection_string
+	vehicle = connect(connection_string, wait_ready=False)
 
-    print (vehicle.location.global_frame.lat)
-    print (vehicle.location.global_frame.lon)
-    print (vehicle.heading)
-    head = vehicle.heading
+	print (vehicle.location.global_frame.lat)
+	print (vehicle.location.global_frame.lon)
+	print (vehicle.heading)
+	head = vehicle.heading
 
-    arm_and_takeoff(100)
+	arm_and_takeoff(100)
 
-    time.sleep(1)
-    vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
-    time.sleep(1)
-    vehicle.armed = True					# arm the vehicle
-    time.sleep(1)
+	time.sleep(1)
+	vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
+	time.sleep(1)
+	vehicle.armed = True					# arm the vehicle
+	time.sleep(1)
 
-    move_random()
+	#vehicle.channels.overrides = {'1':1100}
+	#time.sleep(5)
+	#vehicle.channels.overrides = {'1':1900}
 
-    #vehicle.channels.overrides = {'1':1100}
-    #time.sleep(5)
-    #vehicle.channels.overrides = {'1':1900}
+	# ---------------------call the approach_gps2 function (this is the main function)---------------------------------
+	tempGoalX = 30.618230
+	tempGoalY = -96.336466
+	approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon)
 
-    # ---------------------call the approach_gps2 function (this is the main function)---------------------------------
-    tempGoalX = 30.618230
-    tempGoalY = -96.336466
-    approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
+	time.sleep(1)
+	# Shut down simulator if it was started.
+	if sitl is not None:
+		sitl.stop()
 
-    time.sleep(1)
-    # Shut down simulator if it was started.
-    if sitl is not None:
-        sitl.stop()
-
-    print("Completed")
-    import atexit
-    atexit.register(savecounter)
+	print("Completed")
+	import atexit
+	atexit.register(savecounter)
 '''
 if __name__=="__main__":
 	readParametersFromConfig()
 '''
 '''
-Create log file to write rudder direction, emily position, distance, etc...
+TODO:
+
+Create unit testing for new function. Especially conversion and mathy ones.
 '''

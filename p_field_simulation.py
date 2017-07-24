@@ -138,4 +138,4 @@ def test_case(T,NX,NY,xmax,ymax):					#function to run testcases,NX = number of 
 		plot_fields(NX,NY,xmax,ymax, x_emily, y_emily, x_goal, y_goal,pose,Parameters)
 
 
-test_case(10,30,30, 80, 80)
+test_case(1,30,30, 80, 80)
