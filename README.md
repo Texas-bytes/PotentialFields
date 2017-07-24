@@ -23,3 +23,21 @@ When running for EMILY run (order matters):
 mavproxy.py --master=tcp:127.0.0.1:5760 --out=udpout:127.0.0.1:14550 --map
 
 python final_script.py --connect 127.0.0.1:14550
+
+rc1 is the rudder servo control ( i.e. radio control on channel 1) and is a PWM signal. rc3 is the throttle control which is on channel 3 and also a PWM signal.
+
+In the vectorToCommands function, emily's heading is the diagonal line where true north is the top vertical axis line. Any  
+N
+^
+|     
+| a  /
+|---/
+|  /
+| /
+|/
+- - - - - - - -> E
+|
+|
+|
+|
+S

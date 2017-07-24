@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from os.path import isfile
 from math import asin, sin, cos, tan, sqrt, atan, atan2, radians, pi, degrees
 
+# TODO move to global variable
 r = 6371000					        # radius of earth in meters
 PID = 20.0
 rudder_min = 1100
@@ -114,6 +115,47 @@ def vectorToRC(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vec
 	print "End vectorToRC"
 	return round(rc1), round(rc3)
 
+#See readme file for in depth explanation.
+def vectorToCommands(dx, dy, emilyOrientation ):
+	#converting vector x and y components to Throttle commands.
+	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
+	print 'emily heading: ',emilyOrientation
+	#section for converting x and y components to a rudder command
+	targetHeading = atan2(dy,dx)
+	# XXX There is some framing issue here. if target is in upper left relative to emily, a negative angle is return. ex: -60 is returned by its positive complement is desired so add 360.
+	if targetHeading<0:
+		targetHeading = targetHeading + 2*pi
+	# this is used as the denominator in a percentage, (target - emily)/maxTurningAngle, to determine what percentage of the turning span to turn.
+	# so percentage*turningSpan + pwm_of_zero -> percentage*(max - min)+1500
+	maxTurningAngle = pi/2.0
+	# The difference between emily's heading and the target's.
+	headingDiff = targetHeading - emilyOrientation
+
+	print 'target heading: ',targetHeading
+	print 'headingDiff: ',headingDiff
+	# the headingDiff is centered on emilys heading so emilys heading is 0 and anything between emilys heading and true north will be negative
+	if headingDiff < 0:
+		headingDiff = headingDiff + 2*pi
+	if pi/2.0 <= headingDiff <= pi:
+		#if heading difference is between 90-180 degrees, take a HARD RIGHT.
+		rc1 = rudder_max
+	elif  pi < headingDiff <= 3*pi/2.0:
+		# if heading between 180-270, take a HARD LEFT.
+		rc1 = rudder_min
+	elif headingDiff > 3*pi/2.0:
+		# slight left proportional to the percentage of the maximum turning radius.
+		percentage = (targetHeading - emilyOrientation)/maxTurningAngle
+		print 'percentage',percentage
+		# 400 is the difference in PWM for the neutral rudder position (i.e. when emily is going straight: PWM 1500), and a max right or left (1100 of 1900)
+		rc1 = 400*percentage + 1500
+	elif headingDiff < pi/2.0:
+		# headingDiff < 90 so slight turn right. Turn as a percentage of maximum possible angle.
+		percentage = (targetHeading - emilyOrientation)/maxTurningAngle
+		print 'percentage',percentage
+		rc1 = 400*percentage + 1500
+
+	return round(rc1),round(rc3)
+
 def latlongtoxy(lat,lon,goal_lat):					#conversion from latitude, longitude to x,y coordinates
 	lat, lon,goal_lat = map(radians, [lat, lon, goal_lat])
 	x = r*lon*cos(goal_lat)						#x, y based on goal latitude
@@ -155,7 +197,7 @@ def attractiveField(xGoal, yGoal, xEmily, yEmily, gain = 1.0):
 	dx, dy = 0, 0
 	dist = sqrt((xGoal - xEmily)**2 + (yGoal - yEmily)**2)
 	theta = atan2((yGoal - yEmily),(xGoal - xEmily))
-	print ('Theta: ',theta)
+	print 'Theta: ',theta
 	# TODO Tweak the gain
 	dx = gain*cos(theta)
 	dy = gain*sin(theta)
@@ -221,8 +263,8 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 
 def approachVictim(xGoal, yGoal, xEmily, yEmily, pose, Parameters):
 	dx,dy = attractiveField(xGoal, yGoal, xEmily,yEmily)
-	print('dx: ', dx)
-	print('dy: ', dy)
+	print 'dx: ', dx
+	print 'dy: ', dy
 	return dx,dy
 
 def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#approach victim behaviour

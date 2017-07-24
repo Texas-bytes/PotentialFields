@@ -48,21 +48,23 @@ def sendThrottleCommand(pwm,throttle):
 def readParametersFromConfig(filename = "config.txt"):
 	configFile = open(filename, 'r')
 
+# Adds potential fields together and converts a vector to rudder and throttle commands.
 def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Parameters): #approach a gps position using potential fields
-	"""
-	# This is the main function through which emily appraoches a gps location by potential fields
-	"""
-	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
-	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
 
-	print ("\n HERE I AM\n\n")
+	print ("Approach Victim method\n==========================")
+	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
+	print ('x_goal: ', x_goal)
+	print ('y_goal: ',y_goal)
+	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
+	print ('x_e_start: ',x_e_start)
+	print ('y_e_start: ', y_e_start)
 
 	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
 	initial_dist = dist
 
 	print ('Distance: ',dist)
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
-        print ('After get heading')
+	print ('After get heading')
 	# Eric: I'm not sure if turn_towards is necessary for a successful run.
 	#turn_towards(heading)
 	print ('After Turn towards')
@@ -88,7 +90,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		dx,dy = approachVictim(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
 		print ('dx: ', dx)
 		print ('dy: ', dy)
-		rc1, rc3 = vectorToRC(dx,dy, e_heading,g_lon)					#get rc parameters
+		rc1, rc3 = vectorToCommands(dx,dy, e_heading)					#get rc parameters
 		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)				#haversine distance
 
 		current_time = time.time() - start_time
@@ -99,11 +101,11 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		#code for sending the writing the rc commands
 		# 3 is the thrust control
 		#vehicle.channels.overrides = {'3':rc3}
+		print ("Rudder: ",rc1)
+		print ("Throttle: ",rc3)
 		sendThrottleCommand(rc3, enableThrottle)
 		time.sleep(0.5)
 		vehicle.channels.overrides = {'1':rc1}
-		print ("Rudder: ",rc1)
-		print ("Throttle: ",rc3)
 		saveToLog(e_lat, e_lon,dist,rc1,rc3)
 		time.sleep(0.5)
 	print(initial_dist)
@@ -125,6 +127,7 @@ def turn_towards(heading):
 	at the starting position
 	"""
 	print ("In turn towards:")
+	# The dronekit.vehicle.heading returns 0 if heading is due north
 	head = vehicle.heading
 	print ("Vehicle Heading: ",head)
 	print ("Target Heading: ",heading)
@@ -135,32 +138,32 @@ def turn_towards(heading):
 		sendThrottleCommand(minimumThrottle, enableThrottle)
 		#time.sleep(0.5)
 		print ("Vehicle Heading: ",head)
-	        print ("Target Heading: ",heading)
+		print ("Target Heading: ",heading)
 		vehicle.channels.overrides = {'1':rc1}
 		time.sleep(0.2)
 		head = vehicle.heading
 
 def arm_and_takeoff(aTargetAltitude):
-    """
-    Arms vehicle and fly to aTargetAltitude.
-    """
+	"""
+	Arms vehicle and fly to aTargetAltitude.
+	"""
 
-    print("Basic pre-arm checks")
-    # Don't try to arm until autopilot is ready
-    while not vehicle.is_armable:
-        print(" Waiting for vehicle to initialise...")
-        time.sleep(1)
+	print("Basic pre-arm checks")
+	# Don't try to arm until autopilot is ready
+	while not vehicle.is_armable:
+		print(" Waiting for vehicle to initialise...")
+		time.sleep(1)
 
-    print("Arming Throttle")
-    # Copter should arm in GUIDED mode
+	print("Arming Throttle")
+	# Copter should arm in GUIDED mode
 	# XXX : what the heck is this?
-    #vehicle.mode = VehicleMode("GUIDED")
-    vehicle.armed = True
+	#vehicle.mode = VehicleMode("GUIDED")
+	vehicle.armed = True
 
-    # Confirm vehicle armed before attempting to take off
-    while not vehicle.armed:
-        print(" Waiting for arming...")
-        time.sleep(1)
+	# Confirm vehicle armed before attempting to take off
+	while not vehicle.armed:
+		print(" Waiting for arming...")
+		time.sleep(1)
 
 def move_random():						#function for moving to a random place
 	print("In move_random")
@@ -191,55 +194,65 @@ def savecounter():
 	vehicle.close()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
-    parser.add_argument('--connect',
-                        help="Vehicle connection target string. If not specified, SITL automatically started and used.")
-    args = parser.parse_args()
-    connection_string = args.connect
-    sitl = None
+	parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
+	parser.add_argument('--connect',
+						help="Vehicle connection target string. If not specified, SITL automatically started and used.")
+	args = parser.parse_args()
+	connection_string = args.connect
+	sitl = None
 
-    # Start SITL if no connection string specified
-    if not connection_string:
-        import dronekit_sitl
-        sitl = dronekit_sitl.start_default()
-        connection_string = sitl.connection_string()
+	# Start SITL if no connection string specified
+	if not connection_string:
+		import dronekit_sitl
+		sitl = dronekit_sitl.start_default()
+		connection_string = sitl.connection_string()
 
-    # Connect to the Vehicle
-    #print ('Connecting to vehicle on: %s') % connection_string
-    vehicle = connect(connection_string, wait_ready=False)
+	# Connect to the Vehicle
+	#print ('Connecting to vehicle on: %s') % connection_string
+	vehicle = connect(connection_string, wait_ready=False)
 
-    print (vehicle.location.global_frame.lat)
-    print (vehicle.location.global_frame.lon)
-    print (vehicle.heading)
-    head = vehicle.heading
+	print (vehicle.location.global_frame.lat)
+	print (vehicle.location.global_frame.lon)
+	print (vehicle.heading)
+	head = vehicle.heading
 
-    arm_and_takeoff(100)
+	arm_and_takeoff(100)
 
-    time.sleep(1)
-    vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
-    time.sleep(1)
-    vehicle.armed = True					# arm the vehicle
-    time.sleep(1)
+	time.sleep(1)
+	vehicle.mode = VehicleMode("MANUAL")			# change vehicle mode to manual
+	time.sleep(1)
+	vehicle.armed = True					# arm the vehicle
+	time.sleep(1)
 
-    move_random()
+	#move_random()
 
-    #vehicle.channels.overrides = {'1':1100}
-    #time.sleep(5)
-    #vehicle.channels.overrides = {'1':1900}
+	#vehicle.channels.overrides = {'1':1100}
+	#time.sleep(5)
+	#vehicle.channels.overrides = {'1':1900}
 
-    # ---------------------call the approach_gps2 function (this is the main function)---------------------------------
-    tempGoalX = 30.618230
-    tempGoalY = -96.336466
-    approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
+	# ---------------------call the approach_gps function (this is the main function)---------------------------------
+	# bottom left corner of admin building.
+	tempGoalX = 30.618230
+	tempGoalY = -96.336466
+	# old northgate apartment
+	tempGoalX = 30.620300
+	tempGoalY = -96.345776
+	# Cushing library
+	tempGoalX = 30.616289
+	tempGoalY = -96.339961
+	# Student Commons
+	tempGoalX = 30.615498
+	tempGoalY = -96.336171
+	approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
 
-    time.sleep(1)
-    # Shut down simulator if it was started.
-    if sitl is not None:
-        sitl.stop()
+	time.sleep(1)
+	# Shut down simulator if it was started.
+	if sitl is not None:
+		sitl.stop()
 
-    print("Completed")
-    import atexit
-    atexit.register(savecounter)
+	print("Completed")
+	import atexit
+	atexit.register(savecounter)
 
 '''
 Create log file to write rudder direction, emily position, distance, etc...
