@@ -87,7 +87,7 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 
 		#x,y are given to approach victim function as y,x to algin the north heading and direction in x,y
 
-		dx,dy = approachVictim(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
+		dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
 		print ('dx: ', dx)
 		print ('dy: ', dy)
 		rc1, rc3 = vectorToCommands(dx,dy, e_heading)					#get rc parameters

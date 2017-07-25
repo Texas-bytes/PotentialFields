@@ -65,7 +65,7 @@ def dxdytorc(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vecto
 	print "End dxdytorc"
 	return round(rc1), round(rc3)
 
-# ALL UNITS ARE IN RADIANS.
+# ALL UNITS ARE IN RADIANS. XXX Non working implementation
 def vectorToRC(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
 	print "In vectorToRC"
 	# XXX : Not sure if this is affecting the rudder turning ability???
@@ -118,6 +118,7 @@ def vectorToRC(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vec
 #See readme file for in depth explanation.
 def vectorToCommands(dx, dy, emilyOrientation ):
 	#converting vector x and y components to Throttle commands.
+	# FIXME throttle is wonky and always 1900+ because of vector components dx, and dy.
 	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
 	print 'emily heading: ',emilyOrientation
 	#section for converting x and y components to a rudder command
@@ -204,6 +205,18 @@ def attractiveField(xGoal, yGoal, xEmily, yEmily, gain = 1.0):
 
 	return dx, dy
 
+# FIXME Im not sure if the dx and dy return the correct signs. Theta appears to be correct though.
+def tangentialField(xGoal, yGoal, xEmily, yEmily, gain = 1.0):
+	slope = (yGoal - yEmily)/(xGoal - xEmily)
+	tanSlope = -(xGoal - xEmily)/(yGoal - yEmily)
+	# XXX Not sure which one should be opposite or adjacent.
+	theta = atan(tanSlope)
+	print 'Theta: ',degrees(theta)+360
+	# TODO Tweak the gain
+	dx = gain*cos(theta)
+	dy = gain*sin(theta)
+	return dx,dy
+
 def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_rad):	#generate tangential field
 
 
@@ -274,7 +287,8 @@ def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#appr
 	dx,dy, dx_tan, dy_tan, dx_attc, dy_attc, dx_attb, dy_attb  = 0,0,0,0,0,0,0,0
 
 	#call attractive field in ballistic region
-	dx_attb,dy_attb  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[1],float("inf"), Parameters[3],'constant')
+	#dx_attb,dy_attb  = att_potential_field(x_g,y_g,x_e,y_e,Parameters[1],float("inf"), Parameters[3],'constant')
+	dx_attb,dy_attb  = attractiveField(x_g,y_g,x_e,y_e)
 
 	m = tan(pose_rad)
 	c1 = y_g - tan(pose_rad)*x_g 								# intercept of pose line
@@ -390,4 +404,6 @@ def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_r
 	plt.show()
 
 if __name__ == "__main__":
-	dx,dy = attractiveField(3,5,0,0)
+	# Testing functions.
+	#dx,dy = attractiveField(3,5,0,0)
+	tangentialField(0,0,3,5)
