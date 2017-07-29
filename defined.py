@@ -205,16 +205,51 @@ def attractiveField(xGoal, yGoal, xEmily, yEmily, gain = 1.0):
 
 	return dx, dy
 
-# FIXME Im not sure if the dx and dy return the correct signs. Theta appears to be correct though.
-def tangentialField(xGoal, yGoal, xEmily, yEmily, gain = 1.0):
+# FIXME Im not sure if the dx and dy return the correct signs. Theta appears to be correct though.b
+def tangentialField(xGoal, yGoal, xEmily, yEmily,pose = pi/3.0, gain = 1.0):
+	######## Pose line calculations ########
+	# opposite side of triangle formed from the pose anlge to x-intercept. TODO doc
+	o = yGoal*tan(pi/3)
+	# XXX I'm not sure if this will work in other hemispheres because the sign of longitude will be flipped.
+	poseSlope = yGoal/(o)
+	# y intercept of the pose line
+	b_pose = yGoal - poseSlope*xGoal
+	######## Line perpendicular to Pose Line ########
+	# slope of line perpendicular to pose line.
+	perpSlope  = - 1/poseSlope
+	# 90 - pose gives the angle of the triangle to calculate the perpendicular y intercept
+	alpha = pi/2 - pose
+	#find adjacent side of triangle.
+	a = xGoal*(1/tan(alpha))
+	b_perp = yGoal + a
+	#################################################
 	slope = (yGoal - yEmily)/(xGoal - xEmily)
 	tanSlope = -(xGoal - xEmily)/(yGoal - yEmily)
-	# XXX Not sure which one should be opposite or adjacent.
-	theta = atan(tanSlope)
-	print 'Theta: ',degrees(theta)+360
-	# TODO Tweak the gain
-	dx = gain*cos(theta)
-	dy = gain*sin(theta)
+
+	theta = atan2((yGoal - yEmily),(xGoal - xEmily))
+	# if above perpendicular turn towards top pose line if below turn towards bottom line.
+	y_perp = perpSlope*xEmily + b_perp
+	y_pose = poseSlope*xEmily + b_pose
+	# FIXME Start here!!! The scaling with the vectors is off so the attractive field has no effect
+	x_dist = xEmily
+	y_dist = yEmily
+	if yEmily >= y_perp and yEmily>= y_pose:
+		#anti-clockwise motion around goal
+		dx = -x_dist*cos(theta) + y_dist*sin(theta)
+		dy = -x_dist*sin(theta) - y_dist*cos(theta)
+	elif yEmily >= y_perp and yEmily < y_pose:
+		#clockwise motion around goal
+		dx = x_dist*cos(theta) - y_dist*sin(theta)
+		dy = x_dist*sin(theta) + y_dist*cos(theta)
+	elif yEmily < y_perp and yEmily >= y_pose:
+		#clockwise motion around goal
+		dx = x_dist*cos(theta) - y_dist*sin(theta)
+		dy = x_dist*sin(theta) + y_dist*cos(theta)
+	elif yEmily < y_perp and yEmily < y_pose:
+		#anti-clockwise motion around goal
+		dx = -x_dist*cos(theta) + y_dist*sin(theta)
+		dy = -x_dist*sin(theta) - y_dist*cos(theta)
+	print 'Theta: ',degrees(theta)
 	return dx,dy
 
 def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_rad):	#generate tangential field
@@ -272,12 +307,25 @@ def tan_potential_field(x_g, y_g, x_e, y_e, min_r, max_r, strength, type, pose_r
 	if(distance > max_r):
 		dx = 0
 		dy = 0
+
 	return dx,dy
 
-def approachVictim(xGoal, yGoal, xEmily, yEmily, pose, Parameters):
-	dx,dy = attractiveField(xGoal, yGoal, xEmily,yEmily)
-	print 'dx: ', dx
-	print 'dy: ', dy
+def approachVictim(xGoal, yGoal, xEmily, yEmily, pose):
+	#'''
+	attr_dx,attr_dy = attractiveField(xGoal, yGoal, xEmily,yEmily)
+	print 'Attractive Field xComponent: ', attr_dx
+	print 'Attractive Field yComponent: ', attr_dy
+	'''
+	tan_dx, tan_dy = tangentialField(xGoal, yGoal, xEmily, yEmily)
+	print 'Tangential Field xComponent: ', tan_dx
+	print 'Tangential Field yComponent: ', tan_dy
+	'''
+	#dx, dy = attr_dx+tan_dx , attr_dy+tan_dy
+	#dx, dy = tan_dx , tan_dy
+	dx, dy = attr_dx, attr_dy
+
+	print 'Resultant Field xComponent: ', dx
+	print 'Resultant Field yComponent: ', dy
 	return dx,dy
 
 def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#approach victim behaviour
@@ -333,77 +381,84 @@ def approach_victim_behaviour(x_g, y_g, x_e, y_e, pose_rad, Parameters):			#appr
 	dy = dy_attb + dy_attc + dy_tan
 	return dx,dy
 
+def plot_fields(xGoal, yGoal,xEmily, yEmily, pose, NX = 30, NY = 30):
+	#poseLineSlope = tan(pose)
 
-def plot_fields(NX, NY, xmax, ymax, x_e_start, y_e_start, x_goal, y_goal, pose_rad, Parameters):
-	"""
-	#function only needed for simulation in python
-	"""
-	xmin = -xmax								# range of x
-	ymin = -ymax								# range of y
+	figScaling = max(abs(xGoal-xEmily), abs(yGoal-yEmily))*0.5
+	minX = min(xGoal,xEmily)-figScaling
+	maxX = max(xGoal,xEmily)+figScaling
+	minY = min(yGoal,yEmily)-figScaling
+	maxY = max(yGoal,yEmily)+figScaling
 
-	# Make grid and calculate vector components
-	x = np.linspace(xmin, xmax, NX)						# NX points to create in X
-	y = np.linspace(ymin, ymax, NY)						# NY points to create in Y
-	X, Y = np.meshgrid(x, y)							# create X,Y meshgrid
+	# Plot pose line, perpendicular pose line, and control region.
+	######## Pose line calculations ########
+	o = yGoal*tan(pi/3)
+	# XXX I'm not sure if this will work in other hemispheres because the sign of longitude will be flipped.
+	poseSlope = yGoal/(o)
+	# y intercept of the pose line
+	b_pose = yGoal - poseSlope*xGoal
+	######## Line perpendicular to Pose Line ########
+	# slope of line perpendicular to pose line.
+	perpSlope  = - 1/poseSlope
+	# 90 - pose gives the angle of the triangle to calculate the perpendicular y intercept
+	alpha = pi/2 - pose
+	#find adjacent side of triangle.
+	a = xGoal*(1/tan(alpha))
+	b_perp = yGoal + a
 
-	dx = np.zeros(shape = (NX,NY))						#
-	dy = np.zeros(shape = (NX,NY))
+	x = np.linspace(minX, maxX,NX)
+	y = np.linspace(minY, maxY,NY)
+	#print x
+	#print y
+
+	X, Y = np.meshgrid(x,y)
+	#print X
+	#print Y
+	U, V = [], []
+	#C1 = []
+	#C2 = []
 	for i in range(NX):
 		for j in range(NY):
-			dx[i,j], dy[i,j] = approach_victim_behaviour(x_goal,y_goal,X[i,j],Y[i,j], pose_rad, Parameters)
-	fig, ax = plt.subplots()
-	ax.quiver(x, y, dx, dy, units = 'width')
-	ax.set(aspect=1, title='Potential Fields')
-	# create pose line plot
-	c1 = y_goal -  tan(pose_rad)*x_goal 							#intercept of pose line
+			u , v = approachVictim(xGoal, yGoal, X[i,j], Y[i,j], pose)
+			U.append(u)
+			V.append(v)
+		#c1 = yGoal -  poseLineSlope*X[i,j] 							# intercept of pose line
+		#c2 = yGoal + (1/poseLineSlope)*X[i,j]
+		#C1.append(c1)
+		#C2.append(c2)
 
-	y_line  = tan(pose_rad)*x + c1
+	plt.figure()
+	plt.title("Potential Vector Field")
+	#plot has to be flipped so x <=> y.
+	Q = plt.quiver(Y, X, V, U, units='width')
+	plt.plot(poseSlope*x+b_pose,x,'r-')
+	plt.plot(perpSlope*x+b_perp,x,'r-')
+	plt.plot(yGoal,xGoal,'go',yEmily,xEmily,'ro')
+	#C1 = np.array(C1)
+	#print poseLineSlope
+	#print len(x)
+	#print len(C1)
+	#plt.plot(C1,x,'b-')
 
-	y_line = (y_line > ymax)*ymax + (y_line <= ymax)*y_line					#make zero if out of range
-	y_line = (y_line < -ymax)*(-ymax) + (y_line > -ymax)*y_line				#make zero if out of range
-	ax.plot(x,y_line)										#plot of pose line
+	qk = plt.quiverkey(Q, 0.9, 0.9, 2, r'$2 \frac{m}{s}$', labelpos='E',
+	                   coordinates='figure')
 
-	# plot select lines
-	c2 = y_goal -  tan(pose_rad + Parameters[2]/2)*x_goal
-	c3 = y_goal -  tan(pose_rad - Parameters[2]/2)*x_goal
 
-	y2_line  = tan(pose_rad + Parameters[2]/2)*x + c2					#equation of line
-
-	y2_line = (y2_line > ymax)*ymax + (y2_line <= ymax)*y2_line					#make zero if out of range
-	y2_line = (y2_line < -ymax)*(-ymax) + (y2_line > -ymax)*y2_line				#make zero if out of range
-
-	y3_line  = tan(pose_rad - Parameters[2]/2)*x + c3					#equation of line
-
-	y3_line = (y3_line > ymax)*ymax + (y3_line <= ymax)*y3_line			#make zero if out of range
-	y3_line = (y3_line < -ymax)*(-ymax) + (y3_line > -ymax)*y3_line		#make zero if out of range
-
-	ax.plot(x,y2_line)										#plot of select region lines
-	ax.plot(x,y3_line)										#plot of select region lines
-
-	#----------------robot simulation -----------------
-	x_e = x_e_start
-	y_e = y_e_start
-	point_x = np.array(x_e)
-	point_y = np.array(y_e)
-	dt = 2
-	dist = sqrt((x_goal - x_e)*(x_goal - x_e) + (y_goal - y_e)*(y_goal - y_e))
-
-	while(dist >= Parameters[0] + 0.4):
-		dx,dy = approach_victim_behaviour(x_goal,y_goal,x_e,y_e, pose_rad, Parameters)
-		V = 4*sqrt(dx**2 + dy**2)
-		TH = atan2(dy,dx)
-		x_e = x_e + V*cos(TH)*dt
-		y_e = y_e + V*sin(TH)*dt
-		dist = sqrt((x_goal - x_e)*(x_goal - x_e) + (y_goal - y_e)*(y_goal - y_e))
-
-		point_x = np.append(point_x,x_e)
-		point_y = np.append(point_y,y_e)
-		#print x_e, y_e, dist
-	print Parameters[0]
-	ax.scatter(point_x,point_y)
 	plt.show()
+
 
 if __name__ == "__main__":
 	# Testing functions.
-	#dx,dy = attractiveField(3,5,0,0)
-	tangentialField(0,0,3,5)
+	tempGoalX = 30.615498
+	tempGoalY = -96.336171
+	xEmily = 30.619023
+	yEmily = -96.338742
+
+	'''
+	dx,dy = attractiveField(3,5,0,0)
+	plot_fields(tempGoalX, tempGoalY, xEmily, yEmily, pi/3.0)
+	print 'From Emily:'
+	tangentialField(tempGoalX,tempGoalY,xEmily,yEmily)
+	'''
+	plot_fields(tempGoalX, tempGoalY, xEmily, yEmily, pi/3.0)
+	#tan_potential_field(tempGoalX, tempGoalY, xEmily, yEmily, 0, float('inf'), 1.0, 'constant', pi/3)
