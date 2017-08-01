@@ -16,7 +16,7 @@ import argparse
 
 # Define all the parameters here
 r = 6371000 				# 6378km optional # Radius of earth in kilometers. Use 3956 for miles
-goal_radius = 2				# the radius at which robot will stop
+goal_radius = 1				# the radius at which robot will stop
 control_region_radius = 200		# the radius at which try robot starts to worry about pose
 ballistic_region_gain = 1		# attractive field gain in ballistic region
 tangential_select_gain = 0.1		# tangential field gain in select region
@@ -26,7 +26,7 @@ att_control_gain = 0.8			# tangential field gain in control region
 pose_radians = pi/3			# the pose robot should achieve at the goal
 select_radians = pi/4			# select region angle
 
-enableThrottle = True	#Set to false to disable all thrust commands. Rudder commands still active.
+enableThrottle = False	#Set to false to disable all thrust commands. Rudder commands still active.
 # Minimum Throttle to turn EMILY (i.e. a physical robot.)
 minimumThrottle = 1600
 # Maximum difference of emily's initial orientation vs the orientation towards the goal.
@@ -86,8 +86,9 @@ def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Paramet
 		x_e,y_e = latlongtoxy(e_lat,e_lon,g_lat)			#change latitude and longitude to xy
 
 		#x,y are given to approach victim function as y,x to algin the north heading and direction in x,y
-
-		dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
+		# Critical !!!!. Old functionality vs new functionailty.
+		#dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
+		dx,dy = approachVictim(y_goal,x_goal, y_e,x_e, pose_rad)	#get potential field vector
 		print ('dx: ', dx)
 		print ('dy: ', dy)
 		rc1, rc3 = vectorToCommands(dx,dy, e_heading)					#get rc parameters
@@ -234,6 +235,7 @@ if __name__ == "__main__":
 	# bottom left corner of admin building.
 	tempGoalX = 30.618230
 	tempGoalY = -96.336466
+	'''
 	# old northgate apartment
 	tempGoalX = 30.620300
 	tempGoalY = -96.345776
@@ -243,16 +245,19 @@ if __name__ == "__main__":
 	# Student Commons
 	tempGoalX = 30.615498
 	tempGoalY = -96.336171
+	'''
+	tempGoalX = 30.618389
+	tempGoalY = -96.337487
 	approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
 
-	time.sleep(1)
+	#time.sleep(1)
 	# Shut down simulator if it was started.
-	if sitl is not None:
-		sitl.stop()
+	#if sitl is not None:
+		#sitl.stop()
 
 	print("Completed")
-	import atexit
-	atexit.register(savecounter)
+	#import atexit
+	#atexit.register(savecounter)
 
 '''
 Create log file to write rudder direction, emily position, distance, etc...

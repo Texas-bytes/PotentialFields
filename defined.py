@@ -120,7 +120,7 @@ def vectorToCommands(dx, dy, emilyOrientation ):
 	#converting vector x and y components to Throttle commands.
 	# FIXME throttle is wonky and always 1900+ because of vector components dx, and dy.
 	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
-	print 'emily heading: ',emilyOrientation
+	print 'emily heading: ',degrees(emilyOrientation)
 	#section for converting x and y components to a rudder command
 	targetHeading = atan2(dy,dx)
 	# XXX There is some framing issue here. if target is in upper left relative to emily, a negative angle is return. ex: -60 is returned by its positive complement is desired so add 360.
@@ -132,8 +132,8 @@ def vectorToCommands(dx, dy, emilyOrientation ):
 	# The difference between emily's heading and the target's.
 	headingDiff = targetHeading - emilyOrientation
 
-	print 'target heading: ',targetHeading
-	print 'headingDiff: ',headingDiff
+	print 'target heading: ',degrees(targetHeading)
+	print 'headingDiff: ',degrees(headingDiff)
 	# the headingDiff is centered on emilys heading so emilys heading is 0 and anything between emilys heading and true north will be negative
 	if headingDiff < 0:
 		headingDiff = headingDiff + 2*pi
