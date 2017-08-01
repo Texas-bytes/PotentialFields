@@ -26,7 +26,7 @@ att_control_gain = 0.8			# tangential field gain in control region
 pose_radians = pi/3			# the pose robot should achieve at the goal
 select_radians = pi/4			# select region angle
 
-enableThrottle = False	#Set to false to disable all thrust commands. Rudder commands still active.
+enableThrottle = True	#Set to false to disable all thrust commands. Rudder commands still active.
 # Minimum Throttle to turn EMILY (i.e. a physical robot.)
 minimumThrottle = 1600
 # Maximum difference of emily's initial orientation vs the orientation towards the goal.

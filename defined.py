@@ -235,20 +235,20 @@ def tangentialField(xGoal, yGoal, xEmily, yEmily,pose = pi/3.0, gain = 1.0):
 	y_dist = yEmily
 	if yEmily >= y_perp and yEmily>= y_pose:
 		#anti-clockwise motion around goal
-		dx = -x_dist*cos(theta) + y_dist*sin(theta)
-		dy = -x_dist*sin(theta) - y_dist*cos(theta)
+		dx = cos(theta + pi/2)
+		dy = sin(theta + pi/2)
 	elif yEmily >= y_perp and yEmily < y_pose:
 		#clockwise motion around goal
-		dx = x_dist*cos(theta) - y_dist*sin(theta)
-		dy = x_dist*sin(theta) + y_dist*cos(theta)
+		dx = cos(theta - pi/2)
+		dy = sin(theta - pi/2)
 	elif yEmily < y_perp and yEmily >= y_pose:
 		#clockwise motion around goal
-		dx = x_dist*cos(theta) - y_dist*sin(theta)
-		dy = x_dist*sin(theta) + y_dist*cos(theta)
+		dx = cos(theta - pi/2)
+		dy = sin(theta - pi/2)
 	elif yEmily < y_perp and yEmily < y_pose:
 		#anti-clockwise motion around goal
-		dx = -x_dist*cos(theta) + y_dist*sin(theta)
-		dy = -x_dist*sin(theta) - y_dist*cos(theta)
+		dx = cos(theta + pi/2)
+		dy = sin(theta + pi/2)
 	print 'Theta: ',degrees(theta)
 	return dx,dy
 
@@ -315,14 +315,14 @@ def approachVictim(xGoal, yGoal, xEmily, yEmily, pose):
 	attr_dx,attr_dy = attractiveField(xGoal, yGoal, xEmily,yEmily)
 	print 'Attractive Field xComponent: ', attr_dx
 	print 'Attractive Field yComponent: ', attr_dy
-	'''
+	#'''
 	tan_dx, tan_dy = tangentialField(xGoal, yGoal, xEmily, yEmily)
 	print 'Tangential Field xComponent: ', tan_dx
 	print 'Tangential Field yComponent: ', tan_dy
-	'''
-	#dx, dy = attr_dx+tan_dx , attr_dy+tan_dy
+	#'''
+	dx, dy = attr_dx+tan_dx , attr_dy+tan_dy
 	#dx, dy = tan_dx , tan_dy
-	dx, dy = attr_dx, attr_dy
+	#dx, dy = attr_dx, attr_dy
 
 	print 'Resultant Field xComponent: ', dx
 	print 'Resultant Field yComponent: ', dy
