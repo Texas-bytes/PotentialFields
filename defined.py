@@ -36,7 +36,7 @@ def haver_distance(lat1, lon1, lat2, lon2):		# haversine distance formula
 	return c * r
 
 
-def dxdytorc(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
+def dxdytorc(dx,dy,e_orientation_rad):		#convert potential fields vector to throttle and rudder input
 	print "In dxdytorc"
 	#This is the physical limit of the rudder servos.
 	# XXX : Not sure if this is affecting the rudder turning ability???
@@ -66,7 +66,7 @@ def dxdytorc(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vecto
 	return round(rc1), round(rc3)
 
 # ALL UNITS ARE IN RADIANS. XXX Non working implementation
-def vectorToRC(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vector to throttle and rudder input
+def vectorToRC(dx,dy,e_orientation_rad):		#convert potential fields vector to throttle and rudder input
 	print "In vectorToRC"
 	# XXX : Not sure if this is affecting the rudder turning ability???
 	rudder_span_rad = pi*2			#span of angle in radians
@@ -115,17 +115,154 @@ def vectorToRC(dx,dy,e_orientation_rad,goal_lon):		#convert potential fields vec
 	print "End vectorToRC"
 	return round(rc1), round(rc3)
 
+def vectorToCommands2(dx,dy,emilyOrientation):
+	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
+	print 'emily heading: ',degrees(emilyOrientation)
+	#section for converting x and y components to a rudder command
+	targetHeading = atan2(dy,dx)
+	if targetHeading<0:
+		targetHeading = targetHeading + 2*pi
+	print 'target heading: ',degrees(targetHeading)
+
+	maxTurningAngle = pi/2.0
+	headingDiff = targetHeading - emilyOrientation
+	if headingDiff <0:
+		headingDiff = headingDiff +2*pi
+	print 'headingDiff: ',degrees(headingDiff)
+	if 0 <= headingDiff <= pi/2:
+		print "0 <= x < 90"
+		# slight left proportional to the percentage of the maximum turning radius.
+		print 'diff: ', targetHeading - emilyOrientation
+		percentage = (targetHeading - emilyOrientation)/maxTurningAngle
+		print 'percentage',percentage
+		# 400 is the difference in PWM for the neutral rudder position (i.e. when emily is going straight: PWM 1500), and a max right or left (1100 of 1900)
+		rc1 = 400*percentage + 1500
+	elif pi/2 < headingDiff <= pi:
+		print '90 < x <= 180'
+		#hard right
+		rc1 = rudder_max
+	elif pi<headingDiff< 3*pi/2:
+		print '180 < x < 270'
+		#hard left
+		rc1 = rudder_min
+	elif 3*pi/2 <= headingDiff <2*pi:
+		print '270< = x < 360'
+		# slight left proportional to the percentage of the maximum turning radius.
+		print 'diff: ', targetHeading - emilyOrientation
+		percentage = (targetHeading - emilyOrientation)/maxTurningAngle
+		print 'percentage',percentage
+		# 400 is the difference in PWM for the neutral rudder position (i.e. when emily is going straight: PWM 1500), and a max right or left (1100 of 1900)
+		rc1 = 400*percentage + 1500
+
+	return round(rc1),round(rc3)
+
+def vectorToCommands3(dx,dy,emilyOrientation):
+	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
+	print 'emily heading: ',degrees(emilyOrientation)
+	#section for converting x and y components to a rudder command
+	targetHeading = atan2(dy,dx)
+	if targetHeading<0:
+		targetHeading = targetHeading + 2*pi
+	print 'target heading: ',degrees(targetHeading)
+
+	maxTurningAngle = pi/2.0
+	headingDiff = targetHeading - emilyOrientation
+	if targetHeading > emilyOrientation:
+		print 'blah'
+	if headingDiff <0:
+		headingDiff = headingDiff +2*pi
+	print 'headingDiff: ',degrees(headingDiff)
+	if 0 <= headingDiff <= pi/2:
+		print "0 <= x < 90"
+		# slight left proportional to the percentage of the maximum turning radius.
+		print 'diff: ', targetHeading - emilyOrientation
+		percentage = (targetHeading - emilyOrientation)/maxTurningAngle
+		print 'percentage',percentage
+		# 400 is the difference in PWM for the neutral rudder position (i.e. when emily is going straight: PWM 1500), and a max right or left (1100 of 1900)
+		rc1 = 400*percentage + 1500
+	elif pi/2 < headingDiff <= pi:
+		print '90 < x <= 180'
+		#hard right
+		rc1 = rudder_max
+	elif pi<headingDiff< 3*pi/2:
+		print '180 < x < 270'
+		#hard left
+		rc1 = rudder_min
+	elif 3*pi/2 <= headingDiff <2*pi:
+		print '270< = x < 360'
+		# slight left proportional to the percentage of the maximum turning radius.
+		print 'diff: ', targetHeading - emilyOrientation
+		percentage = (targetHeading - emilyOrientation)/maxTurningAngle
+		print 'percentage',percentage
+		# 400 is the difference in PWM for the neutral rudder position (i.e. when emily is going straight: PWM 1500), and a max right or left (1100 of 1900)
+		rc1 = 400*percentage + 1500
+
+	return round(rc1),round(rc3)
+
+# THIS ONE WORKS!!!! THANK SWEET LORD BABY JESUS!!! Needs pid controller though.
+def vectorToCommands4(dx,dy,emilyOrientation):
+	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
+	print 'emily heading: ',degrees(emilyOrientation)
+	#section for converting x and y components to a rudder command
+	targetHeading = atan2(dy,dx)
+	if targetHeading<0:
+		targetHeading = targetHeading + 2*pi
+	print 'target heading: ',degrees(targetHeading)
+
+	maxTurningAngle = pi/2.0
+	headingDiff = targetHeading - emilyOrientation
+	if headingDiff <0:
+		headingDiff = headingDiff +2*pi
+	print 'headingDiff: ',degrees(headingDiff)
+	#rc1= 0
+	if abs(targetHeading - emilyOrientation)< pi:
+		if abs(targetHeading - emilyOrientation) < pi/6:
+			# pid mode
+			#setRudder(kp * (targetHeading - emilyOrientation))
+			percentage = (targetHeading - emilyOrientation)/maxTurningAngle
+			print 'percentage',percentage
+			# 400 is the difference in PWM for the neutral rudder position (i.e. when emily is going straight: PWM 1500), and a max right or left (1100 of 1900)
+			rc1 = 400*percentage + 1500
+		else:
+			if targetHeading > emilyOrientation:
+				rc1 = rudder_max
+			else:
+				rc1 = rudder_min
+	if abs(targetHeading - emilyOrientation) >= pi:
+		angleDiff = 0
+		if targetHeading > emilyOrientation:
+			angleDiff = (targetHeading - emilyOrientation) - 2*pi
+		else:
+			angleDiff = (targetHeading - emilyOrientation) + 2*pi
+		if abs(angleDiff) < pi/6:
+			#pid mode
+			percentage = (targetHeading - emilyOrientation)/maxTurningAngle
+			print 'percentage',percentage
+			# 400 is the difference in PWM for the neutral rudder position (i.e. when emily is going straight: PWM 1500), and a max right or left (1100 of 1900)
+			rc1 = 400*percentage + 1500
+		else:
+			if angleDiff > 0:
+				rc1 = rudder_max
+			else:
+				rc1 = rudder_min
+
+	return round(rc1),round(rc3)
+
+
 #See readme file for in depth explanation.
 def vectorToCommands(dx, dy, emilyOrientation ):
 	#converting vector x and y components to Throttle commands.
 	# FIXME throttle is wonky and always 1900+ because of vector components dx, and dy.
 	rc3 = throttle_min + (throttle_max - throttle_min)*sqrt(dx**2 + dy**2)    #rc3 input for throttle_max
-	print 'emily heading: ',degrees(emilyOrientation)
+	print 'emily heading: ',emilyOrientation
 	#section for converting x and y components to a rudder command
 	targetHeading = atan2(dy,dx)
+	print 'target heading: ',targetHeading
 	# XXX There is some framing issue here. if target is in upper left relative to emily, a negative angle is return. ex: -60 is returned by its positive complement is desired so add 360.
+
 	if targetHeading<0:
 		targetHeading = targetHeading + 2*pi
+
 	# this is used as the denominator in a percentage, (target - emily)/maxTurningAngle, to determine what percentage of the turning span to turn.
 	# so percentage*turningSpan + pwm_of_zero -> percentage*(max - min)+1500
 	maxTurningAngle = pi/2.0
@@ -135,25 +272,34 @@ def vectorToCommands(dx, dy, emilyOrientation ):
 	print 'target heading: ',degrees(targetHeading)
 	print 'headingDiff: ',degrees(headingDiff)
 	# the headingDiff is centered on emilys heading so emilys heading is 0 and anything between emilys heading and true north will be negative
-	if headingDiff < 0:
-		headingDiff = headingDiff + 2*pi
-	if pi/2.0 <= headingDiff <= pi:
+	#if headingDiff < 0:
+		#headingDiff = headingDiff + 2*pi
+	if headingDiff >= 2*pi:
+		headingDiff = headingDiff -2*pi
+
+	if pi/2.0 <= abs(headingDiff) <= pi:
+		print '90 <= x <= 180'
 		#if heading difference is between 90-180 degrees, take a HARD RIGHT.
 		rc1 = rudder_max
-	elif  pi < headingDiff <= 3*pi/2.0:
+	elif  pi < abs(headingDiff) <= 3*pi/2.0:
+		print '180 < x <= 270'
 		# if heading between 180-270, take a HARD LEFT.
 		rc1 = rudder_min
-	elif headingDiff > 3*pi/2.0:
+	elif 0 <= abs(headingDiff) < pi/2.0:
 		# slight left proportional to the percentage of the maximum turning radius.
 		percentage = (targetHeading - emilyOrientation)/maxTurningAngle
 		print 'percentage',percentage
 		# 400 is the difference in PWM for the neutral rudder position (i.e. when emily is going straight: PWM 1500), and a max right or left (1100 of 1900)
 		rc1 = 400*percentage + 1500
+	else:
+		print "Logic error has occurred..."
+	'''
 	elif headingDiff < pi/2.0:
 		# headingDiff < 90 so slight turn right. Turn as a percentage of maximum possible angle.
 		percentage = (targetHeading - emilyOrientation)/maxTurningAngle
 		print 'percentage',percentage
 		rc1 = 400*percentage + 1500
+	'''
 
 	return round(rc1),round(rc3)
 
@@ -223,8 +369,8 @@ def tangentialField(xGoal, yGoal, xEmily, yEmily,pose = pi/3.0, gain = 1.0):
 	a = xGoal*(1/tan(alpha))
 	b_perp = yGoal + a
 	#################################################
-	slope = (yGoal - yEmily)/(xGoal - xEmily)
-	tanSlope = -(xGoal - xEmily)/(yGoal - yEmily)
+	#slope = (yGoal - yEmily)/(xGoal - xEmily)
+	#tanSlope = -(xGoal - xEmily)/(yGoal - yEmily)
 
 	theta = atan2((yGoal - yEmily),(xGoal - xEmily))
 	# if above perpendicular turn towards top pose line if below turn towards bottom line.
@@ -315,14 +461,14 @@ def approachVictim(xGoal, yGoal, xEmily, yEmily, pose):
 	attr_dx,attr_dy = attractiveField(xGoal, yGoal, xEmily,yEmily)
 	print 'Attractive Field xComponent: ', attr_dx
 	print 'Attractive Field yComponent: ', attr_dy
-	#'''
+	'''
 	tan_dx, tan_dy = tangentialField(xGoal, yGoal, xEmily, yEmily)
 	print 'Tangential Field xComponent: ', tan_dx
 	print 'Tangential Field yComponent: ', tan_dy
-	#'''
-	dx, dy = attr_dx+tan_dx , attr_dy+tan_dy
+	'''
+	#dx, dy = attr_dx+tan_dx , attr_dy+tan_dy
 	#dx, dy = tan_dx , tan_dy
-	#dx, dy = attr_dx, attr_dy
+	dx, dy = attr_dx, attr_dy
 
 	print 'Resultant Field xComponent: ', dx
 	print 'Resultant Field yComponent: ', dy

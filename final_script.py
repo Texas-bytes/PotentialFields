@@ -26,7 +26,7 @@ att_control_gain = 0.8			# tangential field gain in control region
 pose_radians = pi/3			# the pose robot should achieve at the goal
 select_radians = pi/4			# select region angle
 
-enableThrottle = True	#Set to false to disable all thrust commands. Rudder commands still active.
+enableThrottle = False	#Set to false to disable all thrust commands. Rudder commands still active.
 # Minimum Throttle to turn EMILY (i.e. a physical robot.)
 minimumThrottle = 1600
 # Maximum difference of emily's initial orientation vs the orientation towards the goal.
@@ -51,47 +51,41 @@ def readParametersFromConfig(filename = "config.txt"):
 # Adds potential fields together and converts a vector to rudder and throttle commands.
 def approach_gps(g_lat,g_lon,emily_lat_start, emily_lon_start, pose_rad, Parameters): #approach a gps position using potential fields
 
-	print ("Approach Victim method\n==========================")
+	print ("Approach GPS method\n==========================")
 	x_goal,y_goal = latlongtoxy(g_lat,g_lon,g_lat)
-	print ('x_goal: ', x_goal)
-	print ('y_goal: ',y_goal)
+	#print ('x_goal: ', x_goal)
+	#print ('y_goal: ',y_goal)
 	x_e_start,y_e_start = latlongtoxy(emily_lat_start,emily_lon_start,g_lat)
-	print ('x_e_start: ',x_e_start)
-	print ('y_e_start: ', y_e_start)
+	#print ('x_e_start: ',x_e_start)
+	#print ('y_e_start: ', y_e_start)
 
 	dist =  haver_distance(g_lat, g_lon, emily_lat_start, emily_lon_start)
 	initial_dist = dist
 
 	print ('Distance: ',dist)
 	heading = get_heading(emily_lat_start, emily_lon_start, g_lat, g_lon)
-	print ('After get heading')
+	#print ('After get heading')
 	# Eric: I'm not sure if turn_towards is necessary for a successful run.
-	#turn_towards(heading)
-	print ('After Turn towards')
-	#turn towards the goal initially
 
 	start_time = time.time()
 	current_time = 0
 	dstore = []
 	hstore = []
 	while(dist >= goal_radius):
-
 		#------------ code for reading gps location of emily and its orientation ------
 		e_lat = vehicle.location.global_frame.lat
 		e_lon = vehicle.location.global_frame.lon
 		e_heading = vehicle.heading * pi/180		# convert heading to radians
 		#------------------ get e_lat,e_lon, e_orient ---------------------
-
-
 		x_e,y_e = latlongtoxy(e_lat,e_lon,g_lat)			#change latitude and longitude to xy
 
 		#x,y are given to approach victim function as y,x to algin the north heading and direction in x,y
 		# Critical !!!!. Old functionality vs new functionailty.
 		#dx,dy = approach_victim_behaviour(y_goal,x_goal, y_e,x_e, pose_rad, Parameters)	#get potential field vector
 		dx,dy = approachVictim(y_goal,x_goal, y_e,x_e, pose_rad)	#get potential field vector
-		print ('dx: ', dx)
-		print ('dy: ', dy)
-		rc1, rc3 = vectorToCommands(dx,dy, e_heading)					#get rc parameters
+		#print ('dx: ', dx)
+		#print ('dy: ', dy)
+		rc1, rc3 = vectorToCommands4(dx,dy, e_heading)					#get rc parameters
 		dist =  haver_distance(g_lat, g_lon, e_lat, e_lon)				#haversine distance
 
 		current_time = time.time() - start_time
@@ -245,9 +239,18 @@ if __name__ == "__main__":
 	# Student Commons
 	tempGoalX = 30.615498
 	tempGoalY = -96.336171
-	'''
+
 	tempGoalX = 30.618389
 	tempGoalY = -96.337487
+	
+	# Architecture building stairs
+	tempGoalX = 30.618601
+	tempGoalY =  -96.337263
+	'''
+
+	# Lamp Post in between Ag Building and liberal arts building.
+	tempGoalX = 30.618180
+	tempGoalY = -96.337802
 	approach_gps(tempGoalX,tempGoalY, vehicle.location.global_frame.lat, vehicle.location.global_frame.lon, pose_radians, Parameters)
 
 	#time.sleep(1)
